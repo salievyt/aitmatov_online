@@ -1,6 +1,4 @@
-import 'package:chucker_flutter/chucker_flutter.dart';
 import 'package:dio/dio.dart';
-import 'package:logger/logger.dart';
 
 import '../errors/exceptions.dart';
 
@@ -8,13 +6,12 @@ class DioClient {
   
   static const String _baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://dev.phantom-ink.online/api',
+    // defaultValue: 'http://dev.phantom-ink.online/api',
+    defaultValue: 'http://127.0.0.1/api',
   );
   static const int _timeoutSeconds = 15;
 
   late final Dio dio;
-  final Logger _logger = Logger();
-  
 
   DioClient() {
     dio = Dio(
@@ -31,12 +28,6 @@ class DioClient {
     );
 
     dio.interceptors.addAll([
-      ChuckerDioInterceptor(),
-      LogInterceptor(
-        requestBody: true,
-        responseBody: true,
-        logPrint: (o) => _logger.i(o),
-      ),
       _AuthInterceptor(),
       _ErrorInterceptor(),
     ]);

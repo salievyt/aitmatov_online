@@ -211,59 +211,63 @@ class _MessengerGroupsScreenState extends State<MessengerGroupsScreen>
       create: (context) =>
           MessengerBloc(context.read<MessengerRepository>())
             ..add(MessengerLoadRequested()),
-      child: Scaffold(
-        backgroundColor: isDark ? const Color(0xFF0F0F0F) : const Color(0xFFF8F9FC),
-        appBar: AppBar(
-          title: const Text(
-            'Сообщества',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 24,
-            ),
-          ),
-          elevation: 0,
-          centerTitle: true,
-          backgroundColor: Colors.transparent,
-          actions: [
-            Container(
-              margin: const EdgeInsets.only(right: 8),
-              child: IconButton(
-                onPressed: () => _createGroup(context),
-                icon: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF6366F1).withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.add_rounded,
-                    color: Color(0xFF6366F1),
-                    size: 24,
-                  ),
+      child: Builder(
+        builder: (context) {
+          return Scaffold(
+            backgroundColor: isDark ? const Color(0xFF0F0F0F) : const Color(0xFFF8F9FC),
+            appBar: AppBar(
+              title: const Text(
+                'Сообщества',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 24,
                 ),
               ),
-            ),
-          ],
-        ),
-        body: BlocBuilder<MessengerBloc, MessengerState>(
-          builder: (context, state) {
-            if (state is MessengerLoading || state is MessengerInitial) {
-              return const Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
+              elevation: 0,
+              centerTitle: true,
+              backgroundColor: Colors.transparent,
+              actions: [
+                Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  child: IconButton(
+                    onPressed: () => _createGroup(context),
+                    icon: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6366F1).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.add_rounded,
+                        color: Color(0xFF6366F1),
+                        size: 24,
+                      ),
+                    ),
+                  ),
                 ),
-              );
-            }
-            if (state is MessengerError) {
-              return _buildErrorState(state.message);
-            }
-            final groups = (state as MessengerLoaded).groups;
-            if (groups.isEmpty) {
-              return _buildEmptyState();
-            }
-            return _buildGroupsList(groups);
-          },
-        ),
+              ],
+            ),
+            body: BlocBuilder<MessengerBloc, MessengerState>(
+              builder: (context, state) {
+                if (state is MessengerLoading || state is MessengerInitial) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                    ),
+                  );
+                }
+                if (state is MessengerError) {
+                  return _buildErrorState(context, state.message);
+                }
+                final groups = (state as MessengerLoaded).groups;
+                if (groups.isEmpty) {
+                  return _buildEmptyState(context);
+                }
+                return _buildGroupsList(groups);
+              },
+            ),
+          );
+        },
       ),
     );
   }
@@ -298,7 +302,7 @@ class _MessengerGroupsScreenState extends State<MessengerGroupsScreen>
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Center(
@@ -366,7 +370,7 @@ class _MessengerGroupsScreenState extends State<MessengerGroupsScreen>
     );
   }
 
-  Widget _buildErrorState(String message) {
+  Widget _buildErrorState(BuildContext context, String message) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Center(
