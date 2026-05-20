@@ -8,15 +8,17 @@ import '../../../domain/entities/messenger/chat_models.dart';
 import '../../../domain/repositories/messenger_repository.dart';
 import '../bloc/messenger_bloc.dart';
 
-class MessengerChatScreen extends StatefulWidget {
-  final String groupId;
-  const MessengerChatScreen({super.key, required this.groupId});
+class MessengerChannelChatScreen extends StatefulWidget {
+  final String channelId;
+  const MessengerChannelChatScreen({super.key, required this.channelId});
 
   @override
-  State<MessengerChatScreen> createState() => _MessengerChatScreenState();
+  State<MessengerChannelChatScreen> createState() =>
+      _MessengerChannelChatScreenState();
 }
 
-class _MessengerChatScreenState extends State<MessengerChatScreen> {
+class _MessengerChannelChatScreenState
+    extends State<MessengerChannelChatScreen> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   late final MessengerBloc _bloc;
@@ -27,7 +29,7 @@ class _MessengerChatScreenState extends State<MessengerChatScreen> {
     _bloc = MessengerBloc(
       GetIt.I<MessengerRepository>(),
       GetIt.I<LocalStorage>(),
-    )..add(LoadGroupMessagesRequested(groupId: widget.groupId));
+    )..add(LoadChannelMessagesRequested(channelId: widget.channelId));
   }
 
   @override
@@ -42,16 +44,21 @@ class _MessengerChatScreenState extends State<MessengerChatScreen> {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
 
-    final message = ChatMessage(
+    final message = ChannelMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      senderId: 0,
-      senderName: 'Вы',
+      channelId: widget.channelId,
+      authorId: 0,
       type: MessageType.text,
       text: text,
       createdAt: DateTime.now(),
     );
 
-    _bloc.add(SendGroupMessageRequested(groupId: widget.groupId, message: message));
+    _bloc.add(
+      SendChannelMessageRequested(
+        channelId: widget.channelId,
+        message: message,
+      ),
+    );
     _textController.clear();
   }
 
@@ -75,14 +82,14 @@ class _MessengerChatScreenState extends State<MessengerChatScreen> {
       value: _bloc,
       child: BlocConsumer<MessengerBloc, MessengerState>(
         listenWhen: (previous, current) =>
-            current is MessengerGroupChatLoaded || current is MessengerError,
+            current is MessengerChannelChatLoaded || current is MessengerError,
         listener: (context, state) {
-          if (state is MessengerGroupChatLoaded) {
+          if (state is MessengerChannelChatLoaded) {
             _scrollToBottom();
           }
         },
         buildWhen: (previous, current) =>
-            current is MessengerGroupChatLoaded ||
+            current is MessengerChannelChatLoaded ||
             current is MessengerLoading ||
             current is MessengerError,
         builder: (context, state) {
@@ -100,20 +107,20 @@ class _MessengerChatScreenState extends State<MessengerChatScreen> {
               body: _ErrorBody(
                 message: state.message,
                 onRetry: () => _bloc.add(
-                  LoadGroupMessagesRequested(groupId: widget.groupId),
+                  LoadChannelMessagesRequested(channelId: widget.channelId),
                 ),
               ),
             );
           }
 
-          if (state is MessengerGroupChatLoaded) {
-            final group = state.group;
+          if (state is MessengerChannelChatLoaded) {
+            final channel = state.channel;
             final messages = state.messages;
             final currentUserId = state.currentUserId;
 
             return Scaffold(
               backgroundColor: theme.scaffoldBackgroundColor,
-              appBar: _buildAppBar(theme, group),
+              appBar: _buildAppBar(theme, channel),
               body: Column(
                 children: [
                   Expanded(
@@ -138,7 +145,7 @@ class _MessengerChatScreenState extends State<MessengerChatScreen> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(ThemeData theme, ChatGroup? group) {
+  PreferredSizeWidget _buildAppBar(ThemeData theme, Channel? channel) {
     return AppBar(
       elevation: 0,
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -146,7 +153,7 @@ class _MessengerChatScreenState extends State<MessengerChatScreen> {
         icon: Icon(Icons.arrow_back_ios_new, color: theme.colorScheme.onSurface),
         onPressed: () => context.pop(),
       ),
-      title: group == null
+      title: channel == null
           ? const SizedBox.shrink()
           : Row(
               children: [
@@ -156,25 +163,18 @@ class _MessengerChatScreenState extends State<MessengerChatScreen> {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        theme.colorScheme.primary,
-                        theme.colorScheme.primary.withOpacity(0.7),
+                        theme.colorScheme.secondary,
+                        theme.colorScheme.secondary.withOpacity(0.7),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Center(
-                    child: Text(
-                      group.title.length > 1
-                          ? group.title.substring(0, 2).toUpperCase()
-                          : group.title[0].toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
+                  child: const Icon(
+                    Icons.campaign,
+                    color: Colors.white,
+                    size: 20,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -183,35 +183,39 @@ class _MessengerChatScreenState extends State<MessengerChatScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        group.title,
+                        channel.name,
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      Text(
-                        '${group.membersCount} участников',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.outline,
+                      if (channel.description != null &&
+                          channel.description!.isNotEmpty)
+                        Text(
+                          channel.description!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.outline,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
                     ],
                   ),
                 ),
               ],
             ),
       actions: [
-        if (group != null)
+        if (channel != null)
           IconButton(
             icon: Icon(Icons.more_vert, color: theme.colorScheme.onSurface),
-            onPressed: () => _showGroupOptions(context, group),
+            onPressed: () => _showChannelOptions(context, channel),
           ),
       ],
     );
   }
 
-  void _showGroupOptions(BuildContext context, ChatGroup group) {
+  void _showChannelOptions(BuildContext context, Channel channel) {
     final theme = Theme.of(context);
 
     showModalBottomSheet(
@@ -235,16 +239,9 @@ class _MessengerChatScreenState extends State<MessengerChatScreen> {
               ),
               const SizedBox(height: 16),
               ListTile(
-                leading: Icon(Icons.star_outline, color: theme.colorScheme.primary),
-                title: const Text('Назначить старосту'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _showSetLeaderDialog(context, group);
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.people_outline, color: theme.colorScheme.primary),
-                title: const Text('Участники'),
+                leading: Icon(Icons.info_outline, color: theme.colorScheme.secondary),
+                title: const Text('О канале'),
+                subtitle: Text(channel.description ?? 'Описание отсутствует'),
                 onTap: () => Navigator.pop(ctx),
               ),
             ],
@@ -253,61 +250,12 @@ class _MessengerChatScreenState extends State<MessengerChatScreen> {
       ),
     );
   }
-
-  void _showSetLeaderDialog(BuildContext context, ChatGroup group) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Назначить старосту'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: group.members.length,
-            itemBuilder: (_, index) {
-              final member = group.members[index];
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: member.isLeader
-                      ? Colors.amber.withOpacity(0.2)
-                      : Colors.grey.withOpacity(0.2),
-                  child: Icon(
-                    Icons.person,
-                    color: member.isLeader ? Colors.amber : Colors.grey,
-                  ),
-                ),
-                title: Text(member.name),
-                trailing: member.isLeader
-                    ? const Icon(Icons.star, color: Colors.amber, size: 20)
-                    : null,
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _bloc.add(
-                    SetLeaderRequested(
-                      groupId: group.id,
-                      userId: member.userId,
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Отмена'),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // ─── Messages List ───
 
 class _MessagesList extends StatelessWidget {
-  final List<ChatMessage> messages;
+  final List<ChannelMessage> messages;
   final int currentUserId;
   final ScrollController scrollController;
 
@@ -327,7 +275,7 @@ class _MessagesList extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.chat_bubble_outline,
+              Icons.campaign_outlined,
               size: 64,
               color: theme.colorScheme.outline.withOpacity(0.5),
             ),
@@ -340,7 +288,7 @@ class _MessagesList extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Начните общение первым',
+              'Подпишитесь на обновления',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.outline.withOpacity(0.7),
               ),
@@ -356,10 +304,10 @@ class _MessagesList extends StatelessWidget {
       itemCount: messages.length,
       itemBuilder: (context, index) {
         final message = messages[index];
-        final isMe = message.senderId == currentUserId;
+        final isMe = message.authorId == currentUserId;
         final showAvatar = !isMe;
         final isFirstInSequence = index == 0 ||
-            messages[index - 1].senderId != message.senderId;
+            messages[index - 1].authorId != message.authorId;
 
         return _MessageBubble(
           message: message,
@@ -373,7 +321,7 @@ class _MessagesList extends StatelessWidget {
 }
 
 class _MessageBubble extends StatelessWidget {
-  final ChatMessage message;
+  final ChannelMessage message;
   final bool isMe;
   final bool showAvatar;
   final bool showName;
@@ -418,7 +366,7 @@ class _MessageBubble extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(left: 4, bottom: 2),
                       child: Text(
-                        message.senderName,
+                        message.author?.fullName ?? 'Админ',
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.outline,
                           fontWeight: FontWeight.w600,
@@ -434,8 +382,8 @@ class _MessageBubble extends StatelessWidget {
                       gradient: isMe
                           ? LinearGradient(
                               colors: [
-                                theme.colorScheme.primary,
-                                theme.colorScheme.primary.withOpacity(0.85),
+                                theme.colorScheme.secondary,
+                                theme.colorScheme.secondary.withOpacity(0.85),
                               ],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
@@ -473,6 +421,9 @@ class _MessageBubble extends StatelessWidget {
   }
 
   Widget _buildAvatar(ThemeData theme) {
+    final authorName = message.author?.fullName ?? 'A';
+    final initial = authorName.isNotEmpty ? authorName[0].toUpperCase() : 'A';
+
     return Container(
       width: 36,
       height: 36,
@@ -489,9 +440,7 @@ class _MessageBubble extends StatelessWidget {
       ),
       child: Center(
         child: Text(
-          message.senderName.isNotEmpty
-              ? message.senderName[0].toUpperCase()
-              : '?',
+          initial,
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
@@ -629,8 +578,8 @@ class _MessageInput extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      theme.colorScheme.primary,
-                      theme.colorScheme.primary.withOpacity(0.85),
+                      theme.colorScheme.secondary,
+                      theme.colorScheme.secondary.withOpacity(0.85),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -638,7 +587,7 @@ class _MessageInput extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: theme.colorScheme.primary.withOpacity(0.3),
+                      color: theme.colorScheme.secondary.withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),

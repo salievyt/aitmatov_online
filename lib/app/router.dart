@@ -1,3 +1,4 @@
+import 'package:aitmatov_app/features/messenger/presentation/messenger_channel_chat_screen.dart';
 import 'package:chucker_flutter/chucker_flutter.dart';
 import 'package:go_router/go_router.dart';
 
@@ -96,6 +97,12 @@ class AppRouter {
         path: '/messenger/group/:groupId',
         builder: (context, state) =>
             MessengerChatScreen(groupId: state.pathParameters['groupId'] ?? ''),
+      ),
+      GoRoute(
+        path: '/messenger/channel/:channelId',
+        builder: (context, state) => MessengerChannelChatScreen(
+          channelId: state.pathParameters['channelId'] ?? '',
+        ),
       ),
     ],
   );
