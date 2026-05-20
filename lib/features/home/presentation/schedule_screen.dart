@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/presentation/controllers/async_controller.dart';
 import '../../../domain/entities/daily_schedule.dart';
 import '../../../domain/repositories/schedule_repository.dart';
 
@@ -15,9 +16,7 @@ class ScheduleScreen extends StatefulWidget {
 class _ScheduleScreenState extends State<ScheduleScreen>
     with SingleTickerProviderStateMixin {
   int _selectedDay = DateTime.monday;
-  bool _isLoading = true;
-  List<DailySchedule> _items = [];
-  String? _error;
+  late final AsyncController<List<DailySchedule>> _controller;
   late AnimationController _animationController;
 
   final List<Color> _subjectColors = [
@@ -38,30 +37,25 @@ class _ScheduleScreenState extends State<ScheduleScreen>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _load();
+    _controller = AsyncController(
+      loader: () => context.read<ScheduleRepository>().getSchedules(day: _selectedDay),
+    );
+    _controller.load().then((_) {
+      if (!mounted) return;
+      _animationController.forward(from: 0);
+    });
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-    final result =
-        await context.read<ScheduleRepository>().getSchedules(day: _selectedDay);
-    result.fold(
-      (f) => _error = f.message,
-      (data) {
-        _items = [...data]..sort((a, b) => a.startTime.compareTo(b.startTime));
-      },
-    );
+    await _controller.load();
     if (mounted) {
-      setState(() => _isLoading = false);
       _animationController.forward(from: 0);
     }
   }
@@ -89,17 +83,25 @@ class _ScheduleScreenState extends State<ScheduleScreen>
         children: [
           _buildDaySelector(),
           Expanded(
-            child: _isLoading
-                ? const Center(
+            child: ValueListenableBuilder<AsyncState<List<DailySchedule>>>(
+              valueListenable: _controller.state,
+              builder: (context, state, child) {
+                if (state.isLoading) {
+                  return const Center(
                     child: CircularProgressIndicator(
                       strokeWidth: 3,
                     ),
-                  )
-                : _error != null
-                    ? _buildErrorState()
-                    : _items.isEmpty
-                        ? _buildEmptyState()
-                        : _buildScheduleList(),
+                  );
+                }
+
+                if (state.hasError) {
+                  return _buildErrorState(message: state.error);
+                }
+
+                final items = (state.data ?? [])..sort((a, b) => a.startTime.compareTo(b.startTime));
+                return items.isEmpty ? _buildEmptyState() : _buildScheduleList(items);
+              },
+            ),
           ),
         ],
       ),
@@ -234,17 +236,17 @@ class _ScheduleScreenState extends State<ScheduleScreen>
     );
   }
 
-  Widget _buildScheduleList() {
+  Widget _buildScheduleList(List<DailySchedule> items) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return FadeTransition(
       opacity: _animationController,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        itemCount: _items.length,
+        itemCount: items.length,
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (_, index) {
-          final item = _items[index];
+          final item = items[index];
           final color = _subjectColors[index % _subjectColors.length];
 
           return _ScheduleCard(
@@ -292,7 +294,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
     );
   }
 
-  Widget _buildErrorState() {
+  Widget _buildErrorState({String? message}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Center(
@@ -317,7 +319,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              _error ?? 'Ошибка загрузки',
+              message ?? 'Ошибка загрузки',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
