@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/presentation/controllers/async_controller.dart';
 import '../../../core/utils/empty_state_widget.dart';
 import '../../../domain/entities/aitmatov_theme.dart';
 import '../../../domain/repositories/aitmatov_repository.dart';
@@ -14,28 +15,22 @@ class AitmatovScreen extends StatefulWidget {
 }
 
 class _AitmatovScreenState extends State<AitmatovScreen> {
-  List<AitmatovTheme> _themes = [];
-  bool _isLoading = true;
-  String? _error;
+  late final AsyncController<List<AitmatovTheme>> _controller;
 
   @override
   void initState() {
     super.initState();
-    _loadThemes();
+    _controller = AsyncController(loader: () => context.read<AitmatovRepository>().getAitmatovThemes());
+    _controller.load();
   }
 
-  Future<void> _loadThemes() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-    final result = await context.read<AitmatovRepository>().getAitmatovThemes();
-    result.fold(
-      (failure) => setState(() => _error = failure.message),
-      (themes) => setState(() => _themes = themes),
-    );
-    setState(() => _isLoading = false);
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
+
+  Future<void> _loadThemes() async => _controller.load();
 
   @override
   Widget build(BuildContext context) {
@@ -48,23 +43,33 @@ class _AitmatovScreenState extends State<AitmatovScreen> {
           onPressed: () => context.pop(),
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? EmptyStateWidget(
-                  icon: Icons.error_outline,
-                  title: 'Ошибка загрузки',
-                  subtitle: _error!,
-                  buttonText: 'Повторить',
-                  onPressed: _loadThemes,
-                )
-              : _themes.isEmpty
-                  ? const EmptyStateWidget(
-                      icon: Icons.auto_stories,
-                      title: 'Нет тем',
-                      subtitle: 'Темы Айтматова пока не добавлены',
-                    )
-                  : CustomScrollView(
+      body: ValueListenableBuilder<AsyncState<List<AitmatovTheme>>>(
+        valueListenable: _controller.state,
+        builder: (context, state, child) {
+          if (state.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (state.hasError) {
+            return EmptyStateWidget(
+              icon: Icons.error_outline,
+              title: 'Ошибка загрузки',
+              subtitle: state.error ?? 'Ошибка загрузки',
+              buttonText: 'Повторить',
+              onPressed: _loadThemes,
+            );
+          }
+
+          final themes = state.data ?? const [];
+          if (themes.isEmpty) {
+            return const EmptyStateWidget(
+              icon: Icons.auto_stories,
+              title: 'Нет тем',
+              subtitle: 'Темы Айтматова пока не добавлены',
+            );
+          }
+
+          return CustomScrollView(
                       slivers: [
                         SliverToBoxAdapter(
                           child: Padding(
@@ -80,7 +85,7 @@ class _AitmatovScreenState extends State<AitmatovScreen> {
                           sliver: SliverList(
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
-                                final themeItem = _themes[index];
+                                final themeItem = themes[index];
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 12.0),
                                   child: Card(
@@ -118,12 +123,14 @@ class _AitmatovScreenState extends State<AitmatovScreen> {
                                   ),
                                 );
                               },
-                              childCount: _themes.length,
+                              childCount: themes.length,
                             ),
                           ),
                         ),
-                      ],
-                    ),
+              ],
+            );
+          },
+        ),
     );
   }
 

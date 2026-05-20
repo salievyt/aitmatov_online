@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/presentation/controllers/async_controller.dart';
 import '../../../core/utils/empty_state_widget.dart';
 import '../../../domain/entities/subject.dart';
 import '../../../domain/repositories/subject_repository.dart';
@@ -14,16 +15,15 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
-  List<Subject> _subjects = [];
-  bool _isLoading = true;
-  String? _error;
+  late final AsyncController<List<Subject>> _controller;
   late AnimationController _animationController;
 
   @override
   void initState() {
     super.initState();
     _setupAnimation();
-    _loadSubjects();
+    _controller = AsyncController(loader: () => context.read<SubjectRepository>().getSubjects());
+    _controller.load();
   }
 
   void _setupAnimation() {
@@ -37,23 +37,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void dispose() {
     _animationController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  Future<void> _loadSubjects() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-    final result = await context.read<SubjectRepository>().getSubjects();
-    result.fold(
-      (failure) => setState(() => _error = failure.message),
-      (subjects) => setState(() => _subjects = subjects),
-    );
-    setState(() => _isLoading = false);
-  }
+  Future<void> _loadSubjects() async => _controller.load();
 
-  
 
   void _showFilterBottomSheet() {
     showModalBottomSheet(
@@ -102,18 +91,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: _loadSubjects,
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _error != null
-                ? _buildErrorState()
-                : _subjects.isEmpty
-                    ? const EmptyStateWidget(
-                        icon: Icons.menu_book,
-                        title: 'Нет предметов',
-                        subtitle: 'Пока не добавлено ни одного предмета',
-                      )
-                    : CustomScrollView(
-                        slivers: [
+        child: ValueListenableBuilder<AsyncState<List<Subject>>>(
+          valueListenable: _controller.state,
+          builder: (context, state, child) {
+            if (state.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (state.hasError) {
+              return _buildErrorState(state.error);
+            }
+
+            final subjects = state.data ?? const [];
+            if (subjects.isEmpty) {
+              return const EmptyStateWidget(
+                icon: Icons.menu_book,
+                title: 'Нет предметов',
+                subtitle: 'Пока не добавлено ни одного предмета',
+              );
+            }
+
+            return CustomScrollView(
+              slivers: [
                           // Modern App Bar
                           SliverAppBar(
                             elevation: 0,
@@ -171,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                     ),
                                   ),
                                   Text(
-                                    '${_subjects.length} шт',
+                                    '${subjects.length} шт',
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       color: theme.colorScheme.outline,
                                     ),
@@ -192,14 +191,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               ),
                               delegate: SliverChildBuilderDelegate(
                                 (context, index) {
-                                  final subject = _subjects[index];
+                                  final subject = subjects[index];
                                   return _buildSubjectCard(
                                     theme,
                                     subject,
                                     index,
                                   );
                                 },
-                                childCount: _subjects.length,
+                                childCount: subjects.length,
                               ),
                             ),
                           ),
@@ -207,8 +206,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           const SliverToBoxAdapter(
                             child: SizedBox(height: 24),
                           ),
-                        ],
-                      ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -328,7 +329,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildErrorState() {
+  Widget _buildErrorState(String? message) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Center(
@@ -353,7 +354,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
             const SizedBox(height: 8),
             Text(
-              _error ?? 'Ошибка загрузки',
+              message ?? 'Ошибка загрузки',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,

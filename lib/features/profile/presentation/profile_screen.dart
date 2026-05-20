@@ -1,9 +1,7 @@
-import 'package:chucker_flutter/chucker_flutter.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-
+import '../../../core/presentation/controllers/async_controller.dart';
 import '../../../core/constans/app_colors.dart';
 import '../../../core/constans/app_sizes.dart';
 import '../../../core/constans/app_spacing.dart';
@@ -19,9 +17,10 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
+class _ProfileScreenState extends State<ProfileScreen>
+    with SingleTickerProviderStateMixin {
   User? _user;
-  bool _isLoading = true;
+  late final AsyncController<User> _controller;
   late AnimationController _animationController;
 
   @override
@@ -31,25 +30,27 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
-    _loadUser();
+    _controller = AsyncController(
+        loader: () =>
+            context.read<AuthRepository>().getCurrentUser(forceRefresh: true));
+    _controller.load().then((_) {
+      if (!mounted) return;
+      _user = _controller.state.value.data;
+      _animationController.forward(from: 0);
+    });
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   Future<void> _loadUser() async {
-    setState(() => _isLoading = true);
-    final result = await context.read<AuthRepository>().getCurrentUser(forceRefresh: true);
-    result.fold(
-      (failure) => setState(() => _isLoading = false),
-      (user) => setState(() {
-        _user = user;
-        _isLoading = false;
-      }),
-    );
+    await _controller.load();
+    if (!mounted) return;
+    _user = _controller.state.value.data;
     _animationController.forward(from: 0);
   }
 
@@ -57,7 +58,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.dialogRadius)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSizes.dialogRadius)),
         elevation: AppSizes.elevationDialog,
         child: Container(
           decoration: BoxDecoration(
@@ -92,13 +94,19 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 const SizedBox(height: AppSpacing.sectionSpacing),
                 Text(
                   'Выход из аккаунта',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: AppSpacing.itemSpacing),
                 Text(
                   'Вы уверены, что хотите выйти?',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: AppSpacing.dialogPaddingDefault),
                 Row(
@@ -106,8 +114,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                     Expanded(
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.buttonPaddingVertical),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.buttonRadius)),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: AppSpacing.buttonPaddingVertical),
+                          shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(AppSizes.buttonRadius)),
                           side: BorderSide(color: Colors.grey.shade300),
                         ),
                         onPressed: () => Navigator.of(context).pop(),
@@ -127,8 +138,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red.shade600,
                           foregroundColor: AppColors.textOnPrimary,
-                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.buttonPaddingVertical),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.buttonRadius)),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: AppSpacing.buttonPaddingVertical),
+                          shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(AppSizes.buttonRadius)),
                           elevation: AppSizes.elevationCard,
                         ),
                         onPressed: () {
@@ -156,12 +170,15 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   Future<void> _editProfile() async {
     if (_user == null) return;
-    final nicknameController = TextEditingController(text: _user!.username ?? '');
-    final avatarController = TextEditingController(text: _user!.avatarUrl ?? '');
+    final nicknameController =
+        TextEditingController(text: _user!.username ?? '');
+    final avatarController =
+        TextEditingController(text: _user!.avatarUrl ?? '');
     await showDialog<void>(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.dialogRadius)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSizes.dialogRadius)),
         elevation: AppSizes.elevationDialog,
         child: Container(
           decoration: BoxDecoration(
@@ -180,7 +197,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               children: [
                 Text(
                   'Редактировать профиль',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: AppSpacing.sectionSpacing),
                 TextField(
@@ -190,7 +210,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                     filled: true,
                     fillColor: Colors.grey.shade100,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+                      borderRadius:
+                          BorderRadius.circular(AppSizes.radiusMedium),
                       borderSide: BorderSide.none,
                     ),
                   ),
@@ -203,7 +224,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                     filled: true,
                     fillColor: Colors.grey.shade100,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+                      borderRadius:
+                          BorderRadius.circular(AppSizes.radiusMedium),
                       borderSide: BorderSide.none,
                     ),
                   ),
@@ -214,8 +236,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                     Expanded(
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.buttonPaddingVertical),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.buttonRadius)),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: AppSpacing.buttonPaddingVertical),
+                          shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(AppSizes.buttonRadius)),
                           side: BorderSide(color: Colors.grey.shade300),
                         ),
                         onPressed: () => Navigator.of(context).pop(),
@@ -235,18 +260,24 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: AppColors.textOnPrimary,
-                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.buttonPaddingVertical),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.buttonRadius)),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: AppSpacing.buttonPaddingVertical),
+                          shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(AppSizes.buttonRadius)),
                           elevation: AppSizes.elevationCard,
                         ),
                         onPressed: () async {
-                          final result = await context.read<AuthRepository>().updateMyProfile(
-                            username: nicknameController.text.trim(),
-                            avatar: avatarController.text.trim(),
-                          );
+                          final result = await context
+                              .read<AuthRepository>()
+                              .updateMyProfile(
+                                username: nicknameController.text.trim(),
+                                avatar: avatarController.text.trim(),
+                              );
                           if (!mounted) return;
                           result.fold(
-                            (f) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(f.message))),
+                            (f) => ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(f.message))),
                             (u) {
                               setState(() => _user = u);
                               Navigator.of(context).pop();
@@ -284,94 +315,107 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             context.go('/login');
           }
         },
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _user == null
-                ? _buildErrorState('Не удалось загрузить данные пользователя')
-                : RefreshIndicator(
-                    onRefresh: _loadUser,
-                    child: CustomScrollView(
-                      slivers: [
-                        SliverAppBar(
-                          floating: true,
-                          snap: true,
-                          elevation: 0,
-                          backgroundColor: theme.scaffoldBackgroundColor,
-                          title: Text(
-                            'Профиль',
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.3,
+        child: ValueListenableBuilder<AsyncState<User>>(
+          valueListenable: _controller.state,
+          builder: (context, state, child) {
+            if (state.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final user = state.data;
+            if (user == null) {
+              return _buildErrorState(
+                  'Не удалось загрузить данные пользователя');
+            }
+
+            _user ??= user;
+
+            return RefreshIndicator(
+              onRefresh: _loadUser,
+              child: CustomScrollView(
+                slivers: [
+                  SliverAppBar(
+                    floating: true,
+                    snap: true,
+                    elevation: 0,
+                    backgroundColor: theme.scaffoldBackgroundColor,
+                    title: Text(
+                      'Профиль',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    centerTitle: true,
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.cardPadding),
+                      child: Column(
+                        children: [
+                          _buildProfileHeader(theme, isDark, user),
+                          const SizedBox(height: AppSpacing.sectionSpacing),
+                          _buildInfoCard(theme, isDark, user),
+                          const SizedBox(height: AppSpacing.sectionSpacing),
+                          _buildRoleFeaturesCard(theme, user, isDark),
+                          const SizedBox(height: AppSpacing.sectionSpacing),
+                          if (user.isTeacher) ...[
+                            _buildActionButton(
+                              theme: theme,
+                              isDark: isDark,
+                              icon: Icons.dashboard_outlined,
+                              label: 'Открыть кабинет преподавателя',
+                              onTap: () => context.push('/teacher'),
+                              color: theme.colorScheme.secondary,
                             ),
-                          ),
-                          centerTitle: true,
-                        ),
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.all(AppSpacing.cardPadding),
-                            child: Column(
-                              children: [
-                                _buildProfileHeader(theme, isDark),
-                                const SizedBox(height: AppSpacing.sectionSpacing),
-                                _buildInfoCard(theme, isDark),
-                                const SizedBox(height: AppSpacing.sectionSpacing),
-                                _buildRoleFeaturesCard(theme, _user!, isDark),
-                                const SizedBox(height: AppSpacing.sectionSpacing),
-                                if (_user!.isTeacher) ...[
-                                  _buildActionButton(
-                                    theme: theme,
-                                    isDark: isDark,
-                                    icon: Icons.dashboard_outlined,
-                                    label: 'Открыть кабинет преподавателя',
-                                    onTap: () => context.push('/teacher'),
-                                    color: theme.colorScheme.secondary,
-                                  ),
-                                  const SizedBox(height: AppSpacing.itemSpacing),
-                                ],
-                                if (_user!.isAdmin) ...[
-                                  _buildActionButton(
-                                    theme: theme,
-                                    isDark: isDark,
-                                    icon: Icons.admin_panel_settings_outlined,
-                                    label: 'Открыть панель администратора',
-                                    onTap: () => context.push('/admin'),
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                  const SizedBox(height: AppSpacing.itemSpacing),
-                                ],
-                                // if (kDebugMode) ...[
-                                //   _buildActionButton(
-                                //     theme: theme,
-                                //     isDark: isDark,
-                                //     icon: Icons.api_outlined,
-                                //     label: 'API Logs (Debug)',
-                                //     onTap: ChuckerFlutter.showChuckerScreen,
-                                //     color: Colors.teal,
-                                //   ),
-                                //   const SizedBox(height: AppSpacing.itemSpacing),
-                                // ],
-                                _buildActionButton(
-                                  theme: theme,
-                                  isDark: isDark,
-                                  icon: Icons.logout_rounded,
-                                  label: 'Выйти из аккаунта',
-                                  onTap: _showLogoutDialog,
-                                  color: Colors.red.shade400,
-                                  isDanger: true,
-                                ),
-                                const SizedBox(height: AppSpacing.xxl),
-                              ],
+                            const SizedBox(height: AppSpacing.itemSpacing),
+                          ],
+                          if (user.isAdmin) ...[
+                            _buildActionButton(
+                              theme: theme,
+                              isDark: isDark,
+                              icon: Icons.admin_panel_settings_outlined,
+                              label: 'Открыть панель администратора',
+                              onTap: () => context.push('/admin'),
+                              color: theme.colorScheme.primary,
                             ),
+                            const SizedBox(height: AppSpacing.itemSpacing),
+                          ],
+                          // if (kDebugMode) ...[
+                          //   _buildActionButton(
+                          //     theme: theme,
+                          //     isDark: isDark,
+                          //     icon: Icons.api_outlined,
+                          //     label: 'API Logs (Debug)',
+                          //     onTap: ChuckerFlutter.showChuckerScreen,
+                          //     color: Colors.teal,
+                          //   ),
+                          //   const SizedBox(height: AppSpacing.itemSpacing),
+                          // ],
+                          _buildActionButton(
+                            theme: theme,
+                            isDark: isDark,
+                            icon: Icons.logout_rounded,
+                            label: 'Выйти из аккаунта',
+                            onTap: _showLogoutDialog,
+                            color: Colors.red.shade400,
+                            isDanger: true,
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: AppSpacing.xxl),
+                        ],
+                      ),
                     ),
                   ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildProfileHeader(ThemeData theme, bool isDark) {
+  Widget _buildProfileHeader(ThemeData theme, bool isDark, User user) {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -421,20 +465,24 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   child: CircleAvatar(
                     radius: 48,
                     backgroundColor: theme.colorScheme.primary,
-                    backgroundImage: _user!.avatarUrl != null && _user!.avatarUrl!.isNotEmpty
-                        ? NetworkImage(_user!.avatarUrl!)
-                        : null,
-                    child: (_user!.avatarUrl == null || _user!.avatarUrl!.isEmpty)
+                    backgroundImage:
+                        user.avatarUrl != null && user.avatarUrl!.isNotEmpty
+                            ? NetworkImage(user.avatarUrl!)
+                            : null,
+                    child: (user.avatarUrl == null || user.avatarUrl!.isEmpty)
                         ? Text(
-                            _user!.firstName.isNotEmpty ? _user!.firstName[0] : '?',
-                            style: const TextStyle(fontSize: 36, color: Colors.white, fontWeight: FontWeight.w600),
+                            user.firstName.isNotEmpty ? user.firstName[0] : '?',
+                            style: const TextStyle(
+                                fontSize: 36,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600),
                           )
                         : null,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Text(
-                  _user!.fullName,
+                  user.fullName,
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontSize: AppTypography.fontSizeXLarge,
                     fontWeight: FontWeight.w700,
@@ -442,21 +490,22 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  _user!.displayName,
+                  user.displayName,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  _user!.email ?? _user!.phone ?? '',
+                  user.email ?? user.phone ?? '',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurface.withOpacity(0.5),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md, vertical: AppSpacing.xs),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(AppSizes.radiusSmall),
@@ -464,7 +513,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.edit_outlined, size: 14, color: theme.colorScheme.primary),
+                      Icon(Icons.edit_outlined,
+                          size: 14, color: theme.colorScheme.primary),
                       const SizedBox(width: 4),
                       Text(
                         'Редактировать',
@@ -484,10 +534,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildInfoCard(ThemeData theme, bool isDark) {
+  Widget _buildInfoCard(ThemeData theme, bool isDark, User user) {
     return Container(
       decoration: BoxDecoration(
-        color: theme.cardTheme.color ?? (isDark ? AppColors.surfaceDark : Colors.white),
+        color: theme.cardTheme.color ??
+            (isDark ? AppColors.surfaceDark : Colors.white),
         borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
         boxShadow: [
           if (!isDark)
@@ -508,40 +559,48 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               icon: Icons.verified_user_outlined,
               iconColor: theme.colorScheme.primary,
               title: 'Роль в системе',
-              subtitle: '${_user!.roleLabel} (${_user!.role})',
+              subtitle: '${user.roleLabel} ',
+              // (${user.role})
               trailing: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest?.withOpacity(0.5) ?? Colors.grey.shade200,
+                  color: theme.colorScheme.surfaceContainerHighest
+                      .withOpacity(0.5),
                   borderRadius: BorderRadius.circular(AppSizes.radiusSmall),
                 ),
-                child: Text(
-                  'Нельзя изменить',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
-                  ),
-                ),
+                // child: Text(
+                //   'Нельзя изменить',
+                //   style: theme.textTheme.labelSmall?.copyWith(
+                //     color: theme.colorScheme.onSurface.withOpacity(0.6),
+                //   ),
+                // ),
               ),
             ),
-            if (_user!.classLevel != null)
-              Divider(height: 1, indent: 56, color: theme.dividerColor.withOpacity(0.5)),
-            if (_user!.classLevel != null)
+            if (user.classLevel != null)
+              Divider(
+                  height: 1,
+                  indent: 56,
+                  color: theme.dividerColor.withOpacity(0.5)),
+            if (user.classLevel != null)
               _buildInfoRow(
                 theme: theme,
                 icon: Icons.class_outlined,
                 iconColor: Colors.orange,
                 title: 'Класс',
-                subtitle: '${_user!.classLevel} класс',
+                subtitle: '${user.classLevel} класс',
               ),
-            if (_user!.school != null && _user!.school!.isNotEmpty)
-              Divider(height: 1, indent: 56, color: theme.dividerColor.withOpacity(0.5)),
-            if (_user!.school != null && _user!.school!.isNotEmpty)
+            if (user.school != null && user.school!.isNotEmpty)
+              Divider(
+                  height: 1,
+                  indent: 56,
+                  color: theme.dividerColor.withOpacity(0.5)),
+            if (user.school != null && user.school!.isNotEmpty)
               _buildInfoRow(
                 theme: theme,
                 icon: Icons.location_city_outlined,
                 iconColor: Colors.teal,
                 title: 'Школа',
-                subtitle: _user!.school!,
+                subtitle: user.school!,
               ),
           ],
         ),
@@ -558,7 +617,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     Widget? trailing,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: AppSpacing.sm),
       child: Row(
         children: [
           Container(
@@ -591,7 +651,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -604,12 +665,18 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   Widget _buildRoleFeaturesCard(ThemeData theme, User user, bool isDark) {
     final items = <String>[
-      if (user.isStudent) 'Доступ к курсам, урокам, самопроверке и отметке прогресса.',
-      if (user.isStudent) 'Рекомендуемый режим: изучение по шагам и переход к следующему уроку.',
-      if (user.isTeacher) 'Управление учебным процессом и методические материалы платформы.',
-      if (user.isTeacher) 'Мониторинг прогресса учеников по курсам (по роли учителя).',
-      if (user.isAdmin) 'Администрирование платформы: пользователи, контент и доступы.',
-      if (user.isAdmin) 'Контроль качества и модерация образовательного контента.',
+      if (user.isStudent)
+        'Доступ к курсам, урокам, самопроверке и отметке прогресса.',
+      if (user.isStudent)
+        'Рекомендуемый режим: изучение по шагам и переход к следующему уроку.',
+      if (user.isTeacher)
+        'Управление учебным процессом и методические материалы платформы.',
+      if (user.isTeacher)
+        'Мониторинг прогресса учеников по курсам (по роли учителя).',
+      if (user.isAdmin)
+        'Администрирование платформы: пользователи, контент и доступы.',
+      if (user.isAdmin)
+        'Контроль качества и модерация образовательного контента.',
     ];
 
     return Container(
@@ -644,7 +711,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           children: [
             Text(
               'Режим ${user.roleLabel.toLowerCase()}',
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: AppSpacing.md),
             for (final item in items) ...[
@@ -691,14 +759,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: isDanger
-            ? Colors.red.withOpacity(0.05)
-            : color.withOpacity(0.08),
+        color:
+            isDanger ? Colors.red.withOpacity(0.05) : color.withOpacity(0.08),
         borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
         border: Border.all(
-          color: isDanger
-              ? Colors.red.withOpacity(0.15)
-              : color.withOpacity(0.2),
+          color:
+              isDanger ? Colors.red.withOpacity(0.15) : color.withOpacity(0.2),
           width: 1.5,
         ),
       ),
@@ -709,7 +775,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md, vertical: AppSpacing.md),
             child: Row(
               children: [
                 Container(
@@ -734,7 +801,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                     label,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: isDanger ? Colors.red.shade600 : theme.colorScheme.onSurface,
+                      color: isDanger
+                          ? Colors.red.shade600
+                          : theme.colorScheme.onSurface,
                     ),
                   ),
                 ),
@@ -791,7 +860,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF6366F1),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

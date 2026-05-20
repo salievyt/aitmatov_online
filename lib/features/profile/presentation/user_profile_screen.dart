@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/presentation/controllers/async_controller.dart';
 import '../../../core/constans/constants.dart';
 import '../../../domain/entities/user.dart';
 import '../../../domain/repositories/auth_repository.dart';
@@ -15,35 +16,27 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  User? _user;
-  bool _isLoading = true;
-  String? _error;
+  late final AsyncController<User> _controller;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _controller = AsyncController(loader: () => context.read<AuthRepository>().getUserProfile(widget.userId));
+    _controller.load().then((_) {
+      if (!mounted && _controller.state.value.hasError) return;
+      if (_controller.state.value.hasError) {
+        _showReloginDialog();
+      }
+    });
   }
 
-  Future<void> _load() async {
-    final result = await context.read<AuthRepository>().getUserProfile(widget.userId);
-    result.fold(
-      (failure) {
-        setState(() {
-          _error = 'Ошибка загрузки профиля';
-          _isLoading = false;
-        });
-        _showReloginDialog();
-      },
-      (u) {
-        setState(() {
-          _user = u;
-          _isLoading = false;
-          _error = null;
-        });
-      },
-    );
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
+
+  Future<void> _load() async => _controller.load();
 
   void _showReloginDialog() {
     showDialog(
@@ -255,78 +248,80 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
+    return ValueListenableBuilder<AsyncState<User>>(
+      valueListenable: _controller.state,
+      builder: (context, state, child) {
+        if (state.isLoading) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
 
-    if (_error != null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Профиль')),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline_rounded,
-                size: 64,
-                color: Colors.red.shade400,
+        if (state.hasError) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Профиль')),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline_rounded,
+                    size: 64,
+                    color: Colors.red.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    state.error ?? 'Ошибка загрузки профиля',
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              Text(
-                _error!,
-                style: Theme.of(context).textTheme.bodyLarge,
+            ),
+          );
+        }
+
+        final user = state.data;
+        if (user == null) {
+          return const Scaffold(
+            body: Center(
+              child: Text('Профиль недоступен'),
+            ),
+          );
+        }
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Профиль'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.logout_rounded),
+                onPressed: _logout,
+                tooltip: 'Выход',
               ),
             ],
           ),
-        ),
-      );
-    }
-
-    if (_user == null) {
-      return const Scaffold(
-        body: Center(
-          child: Text('Профиль недоступен'),
-        ),
-      );
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Профиль'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            onPressed: _logout,
-            tooltip: 'Выход',
+          body: Padding(
+            padding: const EdgeInsets.all(AppSpacing.cardPadding),
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: AppSizes.avatarMedium,
+                  backgroundImage: user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
+                  child: user.avatarUrl == null ? Text(user.firstName[0]) : null,
+                ),
+                const SizedBox(height: AppSpacing.itemSpacing),
+                Text(
+                  user.fullName,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                Text(user.displayName),
+              ],
+            ),
           ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(AppSpacing.cardPadding),
-        child: Column(
-          children: [
-            CircleAvatar(
-              radius: AppSizes.avatarMedium,
-              backgroundImage: _user!.avatarUrl != null
-                  ? NetworkImage(_user!.avatarUrl!)
-                  : null,
-              child: _user!.avatarUrl == null
-                  ? Text(_user!.firstName[0])
-                  : null,
-            ),
-            const SizedBox(height: AppSpacing.itemSpacing),
-            Text(
-              _user!.fullName,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            Text(_user!.displayName),
-          ],
-        ),
-      ),
+        );
+      },
     );
   }
 }

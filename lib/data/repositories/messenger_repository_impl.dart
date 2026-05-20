@@ -94,14 +94,14 @@ class MessengerRepositoryImpl implements MessengerRepository {
   Future<Either<Failure, void>> sendGroupMessage(String groupId, ChatMessage message) async {
     if (!await _networkInfo.isConnected) return const Left(NetworkFailure());
     try {
-      await _dio.post('/messenger/groups/$groupId/messages/', data: {
-        'message_type': _toApiMessageType(message.type),
-        'text': message.type == MessageType.text ? message.text : null,
-        'sticker_code': message.type == MessageType.sticker ? message.stickerCode : null,
-      });
+      await _dio.post('/messenger/groups/$groupId/messages/', data: _buildMessagePayload(
+        type: message.type,
+        text: message.text,
+        stickerCode: message.stickerCode,
+      ));
       return const Right(null);
     } on DioException catch (e) {
-      return Left(NetworkFailure(e.message ?? 'Ошибка сети'));
+      return Left(NetworkFailure(_extractDioMessage(e)));
     } catch (_) {
       return const Left(ServerFailure());
     }
@@ -230,14 +230,14 @@ class MessengerRepositoryImpl implements MessengerRepository {
   Future<Either<Failure, void>> sendChannelMessage(String channelId, ChannelMessage message) async {
     if (!await _networkInfo.isConnected) return const Left(NetworkFailure());
     try {
-      await _dio.post('/messenger/channels/$channelId/messages/', data: {
-        'message_type': _toApiMessageType(message.type),
-        'text': message.type == MessageType.text ? message.text : null,
-        'sticker_code': message.type == MessageType.sticker ? message.stickerCode : null,
-      });
+      await _dio.post('/messenger/channels/$channelId/messages/', data: _buildMessagePayload(
+        type: message.type,
+        text: message.text,
+        stickerCode: message.stickerCode,
+      ));
       return const Right(null);
     } on DioException catch (e) {
-      return Left(NetworkFailure(e.message ?? 'Ошибка сети'));
+      return Left(NetworkFailure(_extractDioMessage(e)));
     } catch (_) {
       return const Left(ServerFailure());
     }
@@ -377,5 +377,50 @@ class MessengerRepositoryImpl implements MessengerRepository {
       default:
         return MessageType.text;
     }
+  }
+
+  Map<String, dynamic> _buildMessagePayload({
+    required MessageType type,
+    String? text,
+    String? stickerCode,
+  }) {
+    final payload = <String, dynamic>{
+      'message_type': _toApiMessageType(type),
+    };
+
+    if (type == MessageType.text) {
+      final normalized = (text ?? '').trim();
+      if (normalized.isNotEmpty) {
+        payload['text'] = normalized;
+      }
+    }
+
+    if (type == MessageType.sticker) {
+      final normalized = (stickerCode ?? '').trim();
+      if (normalized.isNotEmpty) {
+        payload['sticker_code'] = normalized;
+      }
+    }
+
+    return payload;
+  }
+
+  String _extractDioMessage(DioException e) {
+    final data = e.response?.data;
+    if (data is Map<String, dynamic>) {
+      final detail = data['detail'];
+      if (detail is String && detail.isNotEmpty) return detail;
+
+      final errors = <String>[];
+      data.forEach((key, value) {
+        if (value is List && value.isNotEmpty) {
+          errors.add('$key: ${value.join(', ')}');
+        } else if (value is String && value.isNotEmpty) {
+          errors.add('$key: $value');
+        }
+      });
+      if (errors.isNotEmpty) return errors.join('; ');
+    }
+    return e.message ?? 'Ошибка сети';
   }
 }
