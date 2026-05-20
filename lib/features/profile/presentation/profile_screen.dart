@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constans/app_colors.dart';
+import '../../../core/constans/app_sizes.dart';
+import '../../../core/constans/app_spacing.dart';
+import '../../../core/constans/app_typography.dart';
 import '../../../domain/entities/user.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../../auth/bloc/auth_bloc.dart';
@@ -15,17 +19,29 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
   User? _user;
   bool _isLoading = true;
+  late AnimationController _animationController;
 
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
     _loadUser();
   }
 
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadUser() async {
+    setState(() => _isLoading = true);
     final result = await context.read<AuthRepository>().getCurrentUser(forceRefresh: true);
     result.fold(
       (failure) => setState(() => _isLoading = false),
@@ -34,27 +50,106 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _isLoading = false;
       }),
     );
+    _animationController.forward(from: 0);
   }
 
   void _showLogoutDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Выход из аккаунта'),
-        content: const Text('Вы уверены, что хотите выйти?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Отмена'),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.dialogRadius)),
+        elevation: AppSizes.elevationDialog,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppSizes.dialogRadius),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.dialogWhite,
+                Colors.grey.shade50,
+              ],
+            ),
           ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<AuthBloc>().add(AuthLogoutRequested());
-            },
-            child: const Text('Выйти'),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.dialogPaddingDefault),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: AppSizes.iconContainerSize,
+                  height: AppSizes.iconContainerSize,
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade100,
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+                  ),
+                  child: Icon(
+                    Icons.logout_rounded,
+                    size: AppSizes.iconXL,
+                    color: Colors.red.shade700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sectionSpacing),
+                Text(
+                  'Выход из аккаунта',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: AppSpacing.itemSpacing),
+                Text(
+                  'Вы уверены, что хотите выйти?',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: AppSpacing.dialogPaddingDefault),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.buttonPaddingVertical),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.buttonRadius)),
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(
+                          'Отмена',
+                          style: TextStyle(
+                            fontSize: AppTypography.buttonTextSize,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.itemSpacing),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade600,
+                          foregroundColor: AppColors.textOnPrimary,
+                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.buttonPaddingVertical),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.buttonRadius)),
+                          elevation: AppSizes.elevationCard,
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          context.read<AuthBloc>().add(AuthLogoutRequested());
+                        },
+                        child: const Text(
+                          'Выйти',
+                          style: TextStyle(
+                            fontSize: AppTypography.buttonTextSize,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -65,36 +160,114 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final avatarController = TextEditingController(text: _user!.avatarUrl ?? '');
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Редактировать профиль'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nicknameController, decoration: const InputDecoration(labelText: 'Никнейм')),
-            const SizedBox(height: 8),
-            TextField(controller: avatarController, decoration: const InputDecoration(labelText: 'URL аватара')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
-          FilledButton(
-            onPressed: () async {
-              final result = await context.read<AuthRepository>().updateMyProfile(
-                    username: nicknameController.text.trim(),
-                    avatar: avatarController.text.trim(),
-                  );
-              if (!mounted) return;
-              result.fold(
-                (f) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(f.message))),
-                (u) {
-                  setState(() => _user = u);
-                  Navigator.pop(context);
-                },
-              );
-            },
-            child: const Text('Сохранить'),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.dialogRadius)),
+        elevation: AppSizes.elevationDialog,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppSizes.dialogRadius),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.dialogWhite, Colors.grey.shade50],
+            ),
           ),
-        ],
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.dialogPaddingDefault),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Редактировать профиль',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: AppSpacing.sectionSpacing),
+                TextField(
+                  controller: nicknameController,
+                  decoration: InputDecoration(
+                    labelText: 'Никнейм',
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.itemSpacing),
+                TextField(
+                  controller: avatarController,
+                  decoration: InputDecoration(
+                    labelText: 'URL аватара',
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.dialogPaddingDefault),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.buttonPaddingVertical),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.buttonRadius)),
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(
+                          'Отмена',
+                          style: TextStyle(
+                            fontSize: AppTypography.buttonTextSize,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.itemSpacing),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.textOnPrimary,
+                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.buttonPaddingVertical),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.buttonRadius)),
+                          elevation: AppSizes.elevationCard,
+                        ),
+                        onPressed: () async {
+                          final result = await context.read<AuthRepository>().updateMyProfile(
+                            username: nicknameController.text.trim(),
+                            avatar: avatarController.text.trim(),
+                          );
+                          if (!mounted) return;
+                          result.fold(
+                            (f) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(f.message))),
+                            (u) {
+                              setState(() => _user = u);
+                              Navigator.of(context).pop();
+                            },
+                          );
+                        },
+                        child: const Text(
+                          'Сохранить',
+                          style: TextStyle(
+                            fontSize: AppTypography.buttonTextSize,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -102,10 +275,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Профиль'),
-      ),
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthUnauthenticated) {
@@ -115,119 +287,469 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _user == null
-                ? _buildErrorState("Не удалось загрузить данные пользователя")
-                : ListView(
-                    padding: const EdgeInsets.all(16.0),
+                ? _buildErrorState('Не удалось загрузить данные пользователя')
+                : RefreshIndicator(
+                    onRefresh: _loadUser,
+                    child: CustomScrollView(
+                      slivers: [
+                        SliverAppBar(
+                          floating: true,
+                          snap: true,
+                          elevation: 0,
+                          backgroundColor: theme.scaffoldBackgroundColor,
+                          title: Text(
+                            'Профиль',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                          centerTitle: true,
+                        ),
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.cardPadding),
+                            child: Column(
+                              children: [
+                                _buildProfileHeader(theme, isDark),
+                                const SizedBox(height: AppSpacing.sectionSpacing),
+                                _buildInfoCard(theme, isDark),
+                                const SizedBox(height: AppSpacing.sectionSpacing),
+                                _buildRoleFeaturesCard(theme, _user!, isDark),
+                                const SizedBox(height: AppSpacing.sectionSpacing),
+                                if (_user!.isTeacher) ...[
+                                  _buildActionButton(
+                                    theme: theme,
+                                    isDark: isDark,
+                                    icon: Icons.dashboard_outlined,
+                                    label: 'Открыть кабинет преподавателя',
+                                    onTap: () => context.push('/teacher'),
+                                    color: theme.colorScheme.secondary,
+                                  ),
+                                  const SizedBox(height: AppSpacing.itemSpacing),
+                                ],
+                                if (_user!.isAdmin) ...[
+                                  _buildActionButton(
+                                    theme: theme,
+                                    isDark: isDark,
+                                    icon: Icons.admin_panel_settings_outlined,
+                                    label: 'Открыть панель администратора',
+                                    onTap: () => context.push('/admin'),
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                  const SizedBox(height: AppSpacing.itemSpacing),
+                                ],
+                                // if (kDebugMode) ...[
+                                //   _buildActionButton(
+                                //     theme: theme,
+                                //     isDark: isDark,
+                                //     icon: Icons.api_outlined,
+                                //     label: 'API Logs (Debug)',
+                                //     onTap: ChuckerFlutter.showChuckerScreen,
+                                //     color: Colors.teal,
+                                //   ),
+                                //   const SizedBox(height: AppSpacing.itemSpacing),
+                                // ],
+                                _buildActionButton(
+                                  theme: theme,
+                                  isDark: isDark,
+                                  icon: Icons.logout_rounded,
+                                  label: 'Выйти из аккаунта',
+                                  onTap: _showLogoutDialog,
+                                  color: Colors.red.shade400,
+                                  isDanger: true,
+                                ),
+                                const SizedBox(height: AppSpacing.xxl),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+      ),
+    );
+  }
+
+  Widget _buildProfileHeader(ThemeData theme, bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            theme.colorScheme.primary.withOpacity(0.15),
+            theme.colorScheme.primary.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(AppSizes.radiusXL),
+        border: Border.all(
+          color: theme.colorScheme.primary.withOpacity(0.2),
+          width: 1.5,
+        ),
+        boxShadow: [
+          if (!isDark)
+            BoxShadow(
+              color: theme.colorScheme.primary.withOpacity(0.08),
+              blurRadius: 20,
+              spreadRadius: 0,
+              offset: const Offset(0, 8),
+            ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppSizes.radiusXL),
+        child: InkWell(
+          onTap: _editProfile,
+          borderRadius: BorderRadius.circular(AppSizes.radiusXL),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.colorScheme.primary.withOpacity(0.2),
+                        blurRadius: 16,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: CircleAvatar(
+                    radius: 48,
+                    backgroundColor: theme.colorScheme.primary,
+                    backgroundImage: _user!.avatarUrl != null && _user!.avatarUrl!.isNotEmpty
+                        ? NetworkImage(_user!.avatarUrl!)
+                        : null,
+                    child: (_user!.avatarUrl == null || _user!.avatarUrl!.isEmpty)
+                        ? Text(
+                            _user!.firstName.isNotEmpty ? _user!.firstName[0] : '?',
+                            style: const TextStyle(fontSize: 36, color: Colors.white, fontWeight: FontWeight.w600),
+                          )
+                        : null,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  _user!.fullName,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontSize: AppTypography.fontSizeXLarge,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  _user!.displayName,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  _user!.email ?? _user!.phone ?? '',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.5),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppSizes.radiusSmall),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Center(
-                        child: Column(
-                          children: [
-                            CircleAvatar(
-                              radius: 40,
-                              backgroundColor: theme.colorScheme.primary,
-                              child: Text(
-                                _user!.firstName.isNotEmpty ? _user!.firstName[0] : '?',
-                                style: const TextStyle(fontSize: 32, color: Colors.white),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              _user!.fullName,
-                              style: theme.textTheme.headlineSmall?.copyWith(fontSize: 20),
-                            ),
-                            Text(_user!.displayName),
-                            const SizedBox(height: 4),
-                            Text(
-                              _user!.email ?? _user!.phone ?? '',
-                              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: _editProfile,
-                          icon: const Icon(Icons.edit_outlined),
-                          label: const Text('Изменить никнейм и аватар'),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Card(
-                        child: Column(
-                          children: [
-                            ListTile(
-                              leading: const Icon(Icons.verified_user_outlined),
-                              title: const Text('Роль в системе'),
-                              subtitle: Text('${_user!.roleLabel} (${_user!.role})'),
-                              trailing: const Chip(label: Text('Нельзя изменить')),
-                            ),
-                            const Divider(height: 1),
-                            if (_user!.classLevel != null)
-                              ListTile(
-                                leading: const Icon(Icons.class_outlined),
-                                title: const Text('Класс'),
-                                subtitle: Text('${_user!.classLevel} класс'),
-                              ),
-                            if (_user!.school != null && _user!.school!.isNotEmpty)
-                              ListTile(
-                                leading: const Icon(Icons.location_city_outlined),
-                                title: const Text('Школа'),
-                                subtitle: Text(_user!.school!),
-                              ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildRoleFeaturesCard(theme, _user!),
-                      const SizedBox(height: 12),
-                      if (_user!.isTeacher)
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: () => context.push('/teacher'),
-                            icon: const Icon(Icons.dashboard_outlined),
-                            label: const Text('Открыть кабинет преподавателя'),
-                          ),
-                        ),
-                      if (_user!.isAdmin)
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: () => context.push('/admin'),
-                            icon: const Icon(Icons.admin_panel_settings_outlined),
-                            label: const Text('Открыть панель администратора'),
-                          ),
-                        ),
-                      const SizedBox(height: 24),
-                      if (kDebugMode)
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: ChuckerFlutter.showChuckerScreen,
-                            icon: const Icon(Icons.api_outlined),
-                            label: const Text('API Logs (Debug)'),
-                          ),
-                        ),
-                      if (kDebugMode) const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: _showLogoutDialog,
-                          icon: const Icon(Icons.logout),
-                          label: const Text('Выйти из аккаунта'),
+                      Icon(Icons.edit_outlined, size: 14, color: theme.colorScheme.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Редактировать',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
-
-    
   }
 
+  Widget _buildInfoCard(ThemeData theme, bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.cardTheme.color ?? (isDark ? AppColors.surfaceDark : Colors.white),
+        borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
+        boxShadow: [
+          if (!isDark)
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 16,
+              spreadRadius: 0,
+              offset: const Offset(0, 4),
+            ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
+        child: Column(
+          children: [
+            _buildInfoRow(
+              theme: theme,
+              icon: Icons.verified_user_outlined,
+              iconColor: theme.colorScheme.primary,
+              title: 'Роль в системе',
+              subtitle: '${_user!.roleLabel} (${_user!.role})',
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest?.withOpacity(0.5) ?? Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(AppSizes.radiusSmall),
+                ),
+                child: Text(
+                  'Нельзя изменить',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+              ),
+            ),
+            if (_user!.classLevel != null)
+              Divider(height: 1, indent: 56, color: theme.dividerColor.withOpacity(0.5)),
+            if (_user!.classLevel != null)
+              _buildInfoRow(
+                theme: theme,
+                icon: Icons.class_outlined,
+                iconColor: Colors.orange,
+                title: 'Класс',
+                subtitle: '${_user!.classLevel} класс',
+              ),
+            if (_user!.school != null && _user!.school!.isNotEmpty)
+              Divider(height: 1, indent: 56, color: theme.dividerColor.withOpacity(0.5)),
+            if (_user!.school != null && _user!.school!.isNotEmpty)
+              _buildInfoRow(
+                theme: theme,
+                icon: Icons.location_city_outlined,
+                iconColor: Colors.teal,
+                title: 'Школа',
+                subtitle: _user!.school!,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 
+  Widget _buildInfoRow({
+    required ThemeData theme,
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    Widget? trailing,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  iconColor.withOpacity(0.2),
+                  iconColor.withOpacity(0.1),
+                ],
+              ),
+            ),
+            child: Icon(icon, size: 20, color: iconColor),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+          if (trailing != null) trailing,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoleFeaturesCard(ThemeData theme, User user, bool isDark) {
+    final items = <String>[
+      if (user.isStudent) 'Доступ к курсам, урокам, самопроверке и отметке прогресса.',
+      if (user.isStudent) 'Рекомендуемый режим: изучение по шагам и переход к следующему уроку.',
+      if (user.isTeacher) 'Управление учебным процессом и методические материалы платформы.',
+      if (user.isTeacher) 'Мониторинг прогресса учеников по курсам (по роли учителя).',
+      if (user.isAdmin) 'Администрирование платформы: пользователи, контент и доступы.',
+      if (user.isAdmin) 'Контроль качества и модерация образовательного контента.',
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            theme.colorScheme.secondary.withOpacity(0.12),
+            theme.colorScheme.secondary.withOpacity(0.04),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
+        border: Border.all(
+          color: theme.colorScheme.secondary.withOpacity(0.15),
+          width: 1.5,
+        ),
+        boxShadow: [
+          if (!isDark)
+            BoxShadow(
+              color: theme.colorScheme.secondary.withOpacity(0.06),
+              blurRadius: 16,
+              spreadRadius: 0,
+              offset: const Offset(0, 4),
+            ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.cardPadding),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Режим ${user.roleLabel.toLowerCase()}',
+              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            for (final item in items) ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 2),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.secondary.withOpacity(0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.check,
+                      size: 14,
+                      color: theme.colorScheme.secondary,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      item,
+                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required ThemeData theme,
+    required bool isDark,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    required Color color,
+    bool isDanger = false,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDanger
+            ? Colors.red.withOpacity(0.05)
+            : color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
+        border: Border.all(
+          color: isDanger
+              ? Colors.red.withOpacity(0.15)
+              : color.withOpacity(0.2),
+          width: 1.5,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppSizes.radiusLarge),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        color.withOpacity(0.2),
+                        color.withOpacity(0.1),
+                      ],
+                    ),
+                  ),
+                  child: Icon(icon, size: 20, color: color),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: isDanger ? Colors.red.shade600 : theme.colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 14,
+                  color: theme.colorScheme.onSurface.withOpacity(0.4),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildErrorState(String? error) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -275,47 +797,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-
-
-
-  Widget _buildRoleFeaturesCard(ThemeData theme, User user) {
-    final items = <String>[
-      if (user.isStudent) 'Доступ к курсам, урокам, самопроверке и отметке прогресса.',
-      if (user.isStudent) 'Рекомендуемый режим: изучение по шагам и переход к следующему уроку.',
-      if (user.isTeacher) 'Управление учебным процессом и методические материалы платформы.',
-      if (user.isTeacher) 'Мониторинг прогресса учеников по курсам (по роли учителя).',
-      if (user.isAdmin) 'Администрирование платформы: пользователи, контент и доступы.',
-      if (user.isAdmin) 'Контроль качества и модерация образовательного контента.',
-    ];
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Режим ${user.roleLabel.toLowerCase()}', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 10),
-            for (final item in items) ...[
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.only(top: 3),
-                    child: Icon(Icons.check_circle_outline, size: 18),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(item)),
-                ],
-              ),
-              const SizedBox(height: 8),
-            ],
           ],
         ),
       ),
