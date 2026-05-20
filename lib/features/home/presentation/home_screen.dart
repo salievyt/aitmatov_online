@@ -53,6 +53,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     setState(() => _isLoading = false);
   }
 
+  
+
   void _showFilterBottomSheet() {
     showModalBottomSheet(
       context: context,
@@ -103,13 +105,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? EmptyStateWidget(
-                    icon: Icons.error_outline,
-                    title: 'Ошибка загрузки',
-                    subtitle: _error!,
-                    buttonText: 'Повторить',
-                    onPressed: _loadSubjects,
-                  )
+                ? _buildErrorState()
                 : _subjects.isEmpty
                     ? const EmptyStateWidget(
                         icon: Icons.menu_book,
@@ -327,6 +323,58 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: isDark ? Colors.red[400] : Colors.red[300],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Что-то пошло не так',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _error ?? 'Ошибка загрузки',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? Colors.white60 : Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _loadSubjects,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Попробовать снова'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6366F1),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

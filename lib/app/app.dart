@@ -1,3 +1,4 @@
+import '../data/local/local_storage.dart';
 import '../domain/repositories/auth_repository.dart';
 import '../domain/repositories/course_repository.dart';
 import '../domain/repositories/progress_repository.dart';
@@ -31,6 +32,7 @@ class AitmatovApp extends StatelessWidget {
         RepositoryProvider<UserManagementRepository>(create: (_) => GetIt.I<UserManagementRepository>()),
         RepositoryProvider<MessengerRepository>(create: (_) => GetIt.I<MessengerRepository>()),
         RepositoryProvider<ScheduleRepository>(create: (_) => GetIt.I<ScheduleRepository>()),
+        RepositoryProvider<LocalStorage>(create: (_) => GetIt.I<LocalStorage>()),
       ],
       child: MultiBlocProvider(
         providers: [

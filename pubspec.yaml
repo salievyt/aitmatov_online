@@ -49,10 +49,11 @@ dependencies:
   # Utils
   intl: ^0.20.2
   logger: ^2.0.2
+  chucker_flutter: ^1.9.2
 
   # Icons
   cupertino_icons: ^1.0.6
-  chucker_flutter: ^1.9.2
+  flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
   flutter_test:
@@ -66,7 +67,12 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
-
   assets:
     - assets/images/
     - assets/icons/
+
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/app_logo.png"
