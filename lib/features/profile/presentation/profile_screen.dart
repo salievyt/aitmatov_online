@@ -559,7 +559,8 @@ class _ProfileScreenState extends State<ProfileScreen>
               icon: Icons.verified_user_outlined,
               iconColor: theme.colorScheme.primary,
               title: 'Роль в системе',
-              subtitle: '${user.roleLabel} (${user.role})',
+              subtitle: '${user.roleLabel} ',
+              // (${user.role})
               trailing: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -567,12 +568,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                       .withOpacity(0.5),
                   borderRadius: BorderRadius.circular(AppSizes.radiusSmall),
                 ),
-                child: Text(
-                  'Нельзя изменить',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
-                  ),
-                ),
+                // child: Text(
+                //   'Нельзя изменить',
+                //   style: theme.textTheme.labelSmall?.copyWith(
+                //     color: theme.colorScheme.onSurface.withOpacity(0.6),
+                //   ),
+                // ),
               ),
             ),
             if (user.classLevel != null)
