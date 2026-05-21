@@ -40,7 +40,7 @@ class MessengerRepositoryImpl implements MessengerRepository {
   Future<Either<Failure, void>> sendGroupMessage(String groupId, ChatMessage message) async {
     final socket = _groupSockets[groupId];
     if (socket != null) {
-      socket.add(jsonEncode(_buildMessagePayload(type: message.type, text: message.text, stickerCode: message.stickerCode)));
+      socket.add(jsonEncode(_buildSendMessagePayload(type: message.type, text: message.text, stickerCode: message.stickerCode)));
       return const Right(null);
     }
     if (!await _networkInfo.isConnected) return const Left(NetworkFailure());
@@ -67,12 +67,20 @@ class MessengerRepositoryImpl implements MessengerRepository {
 
   Future<void> _connectGroupSocket(String groupId, StreamController<ChatMessage> controller) async {
     try {
-      final uri = _wsUriWithAuth('/ws/messenger/groups/$groupId/');
+      final uri = _wsUriWithAuth('/ws/messenger/$groupId/');
       final socket = await WebSocket.connect(uri.toString());
       _groupSockets[groupId] = socket;
       socket.listen((event) {
         final payload = _decodeEvent(event);
-        if (payload != null) controller.add(_parseChatMessage(payload));
+        if (payload != null) {
+          final messageType = payload['type'];
+          if (messageType == 'message') {
+            final data = payload['data'];
+            if (data is Map<String, dynamic>) {
+              controller.add(_parseChatMessage(data));
+            }
+          }
+        }
       }, onDone: () {
         _groupSockets.remove(groupId);
         _reconnectGroupSocket(groupId, controller);
@@ -121,7 +129,7 @@ class MessengerRepositoryImpl implements MessengerRepository {
   Future<Either<Failure, void>> sendChannelMessage(String channelId, ChannelMessage message) async {
     final socket = _channelSockets[channelId];
     if (socket != null) {
-      socket.add(jsonEncode(_buildMessagePayload(type: message.type, text: message.text, stickerCode: message.stickerCode)));
+      socket.add(jsonEncode(_buildSendMessagePayload(type: message.type, text: message.text, stickerCode: message.stickerCode)));
       return const Right(null);
     }
     if (!await _networkInfo.isConnected) return const Left(NetworkFailure());
@@ -152,7 +160,15 @@ class MessengerRepositoryImpl implements MessengerRepository {
       _channelSockets[channelId] = socket;
       socket.listen((event) {
         final payload = _decodeEvent(event);
-        if (payload != null) controller.add(_parseChannelMessage(payload));
+        if (payload != null) {
+          final messageType = payload['type'];
+          if (messageType == 'message') {
+            final data = payload['data'];
+            if (data is Map<String, dynamic>) {
+              controller.add(_parseChannelMessage(data));
+            }
+          }
+        }
       }, onDone: () {
         _channelSockets.remove(channelId);
         _reconnectChannelSocket(channelId, controller);
@@ -182,20 +198,31 @@ class MessengerRepositoryImpl implements MessengerRepository {
   Uri _wsUri(String path) {
     final base = Uri.parse(_dio.options.baseUrl);
     final scheme = base.scheme == 'https' ? 'wss' : 'ws';
-    return Uri(scheme: scheme, host: base.host, port: base.hasPort ? base.port : null, path: '${base.path}$path'.replaceAll('//', '/'));
+    // Удаляем /api из пути для WebSocket
+    final wsPath = path.startsWith('/') ? path : '/$path';
+    return Uri(scheme: scheme, host: base.host, port: base.hasPort ? base.port : null, path: wsPath);
   }
 
   Uri _wsUriWithAuth(String path) {
     final base = Uri.parse(_dio.options.baseUrl);
     final scheme = base.scheme == 'https' ? 'wss' : 'ws';
     final token = _localStorage.getToken();
-    final query = token != null && token.isNotEmpty ? '?token=$token' : '';
+    // Удаляем /api из пути для WebSocket
+    final wsPath = path.startsWith('/') ? path : '/$path';
+    if (token == null || token.isEmpty) {
+      return Uri(
+        scheme: scheme,
+        host: base.host,
+        port: base.hasPort ? base.port : null,
+        path: wsPath,
+      );
+    }
     return Uri(
       scheme: scheme,
       host: base.host,
       port: base.hasPort ? base.port : null,
-      path: '${base.path}$path'.replaceAll('//', '/'),
-      query: query,
+      path: wsPath,
+      queryParameters: {'token': token},
     );
   }
 
@@ -335,6 +362,16 @@ class MessengerRepositoryImpl implements MessengerRepository {
       final s = (stickerCode ?? '').trim();
       if (s.isNotEmpty) payload['sticker_code'] = s;
     }
+    return payload;
+  }
+
+  Map<String, dynamic> _buildSendMessagePayload({
+    required MessageType type,
+    String? text,
+    String? stickerCode,
+  }) {
+    final payload = _buildMessagePayload(type: type, text: text, stickerCode: stickerCode);
+    payload['action'] = 'send.message';
     return payload;
   }
 
