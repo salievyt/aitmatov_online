@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:async';
 
 import '../../../data/local/local_storage.dart';
 import '../../../domain/entities/messenger/chat_models.dart';
@@ -22,6 +23,8 @@ class _MessengerChannelChatScreenState
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   late final MessengerBloc _bloc;
+  List<ChannelMessage> _liveMessages = const [];
+  StreamSubscription<ChannelMessage>? _wsSub;
 
   @override
   void initState() {
@@ -30,11 +33,18 @@ class _MessengerChannelChatScreenState
       GetIt.I<MessengerRepository>(),
       GetIt.I<LocalStorage>(),
     )..add(LoadChannelMessagesRequested(channelId: widget.channelId));
+    _wsSub = GetIt.I<MessengerRepository>().connectChannelStream(widget.channelId).listen((event) {
+      if (!mounted) return;
+      setState(() => _liveMessages = [..._liveMessages, event]);
+      _scrollToBottom();
+    });
   }
 
   @override
   void dispose() {
     _bloc.close();
+    _wsSub?.cancel();
+    GetIt.I<MessengerRepository>().disconnectChannelStream(widget.channelId);
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -115,7 +125,7 @@ class _MessengerChannelChatScreenState
 
           if (state is MessengerChannelChatLoaded) {
             final channel = state.channel;
-            final messages = state.messages;
+            final messages = [...state.messages, ..._liveMessages];
             final currentUserId = state.currentUserId;
 
             return Scaffold(
@@ -243,6 +253,14 @@ class _MessengerChannelChatScreenState
                 title: const Text('О канале'),
                 subtitle: Text(channel.description ?? 'Описание отсутствует'),
                 onTap: () => Navigator.pop(ctx),
+              ),
+              ListTile(
+                leading: Icon(Icons.people_outline, color: theme.colorScheme.secondary),
+                title: const Text('Участники канала'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  context.push('/messenger/channel/${channel.id}/members');
+                },
               ),
             ],
           ),

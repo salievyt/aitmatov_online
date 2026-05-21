@@ -1,6 +1,6 @@
 class ServerException implements Exception {
   final String message;
-  ServerException([this.message = 'Server error']);
+  ServerException([this.message = 'Ошибка сервера']);
 }
 
 class NetworkException implements Exception {

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../domain/entities/user.dart';
+import '../../../domain/entities/admin_models.dart';
+import '../../../domain/repositories/admin_repository.dart';
 import '../../../domain/repositories/user_management_repository.dart';
 
 class AdminAnalyticsScreen extends StatefulWidget {
@@ -14,6 +16,7 @@ class AdminAnalyticsScreen extends StatefulWidget {
 class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
   bool _isLoading = true;
   List<User> _users = [];
+  PlatformAnalytics? _analytics;
 
   @override
   void initState() {
@@ -22,9 +25,13 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
   }
 
   Future<void> _load() async {
+    final userRepo = context.read<UserManagementRepository>();
+    final adminRepo = context.read<AdminRepository>();
     setState(() => _isLoading = true);
-    final result = await context.read<UserManagementRepository>().getUsers();
+    final result = await userRepo.getUsers();
+    final analyticsResult = await adminRepo.getPlatformAnalytics();
     result.fold((_) {}, (data) => _users = data);
+    analyticsResult.fold((_) {}, (data) => _analytics = data);
     setState(() => _isLoading = false);
   }
 
@@ -52,6 +59,14 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
                     subtitle: Text('Подключи backend endpoint presence/online для точного онлайна.'),
                   ),
                 ),
+                if (_analytics != null)
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.insights_outlined),
+                      title: const Text('API аналитика'),
+                      subtitle: Text('overview: ${_analytics!.overview}\nusers: ${_analytics!.users}\nengagement: ${_analytics!.engagement}'),
+                    ),
+                  ),
               ],
             ),
     );

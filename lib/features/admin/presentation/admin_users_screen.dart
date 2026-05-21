@@ -16,6 +16,19 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   List<User> _users = [];
   bool _isLoading = true;
 
+  String _roleLabel(String role) {
+    switch (role.trim().toLowerCase()) {
+      case 'student':
+        return 'Ученик';
+      case 'teacher':
+        return 'Учитель';
+      case 'admin':
+        return 'Администратор';
+      default:
+        return role;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -43,15 +56,15 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               DropdownButtonFormField<String>(
                 initialValue: role,
                 items: const [
-                  DropdownMenuItem(value: 'student', child: Text('student')),
-                  DropdownMenuItem(value: 'teacher', child: Text('teacher')),
-                  DropdownMenuItem(value: 'admin', child: Text('admin')),
+                  DropdownMenuItem(value: 'student', child: Text('Ученик')),
+                  DropdownMenuItem(value: 'teacher', child: Text('Учитель')),
+                  DropdownMenuItem(value: 'admin', child: Text('Администратор')),
                 ],
                 onChanged: (v) => setStateDialog(() => role = v ?? 'student'),
               ),
               SwitchListTile(
                 value: isActive,
-                title: const Text('is_active'),
+                title: const Text('Аккаунт активен'),
                 onChanged: (v) => setStateDialog(() => isActive = v),
               ),
             ],
@@ -88,7 +101,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 return Card(
                   child: ListTile(
                     title: Text(user.fullName),
-                    subtitle: Text('${user.email ?? user.phone ?? ''} | ${user.role}'),
+                    subtitle: Text('${user.email ?? user.phone ?? ''} | ${_roleLabel(user.role)}'),
                     trailing: IconButton(icon: const Icon(Icons.edit), onPressed: () => _editUser(user)),
                   ),
                 );

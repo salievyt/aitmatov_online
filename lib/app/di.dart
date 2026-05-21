@@ -6,6 +6,7 @@ import '../core/network/dio_client.dart';
 import '../core/network/network_info.dart';
 import '../data/local/local_storage.dart';
 import '../data/repositories/aitmatov_repository_impl.dart';
+import '../data/repositories/admin_repository_impl.dart';
 import '../data/repositories/auth_repository_impl.dart';
 import '../data/repositories/course_repository_impl.dart';
 import '../data/repositories/messenger_repository_impl.dart';
@@ -14,6 +15,7 @@ import '../data/repositories/schedule_repository_impl.dart';
 import '../data/repositories/subject_repository_impl.dart';
 import '../data/repositories/user_management_repository_impl.dart';
 import '../domain/repositories/aitmatov_repository.dart';
+import '../domain/repositories/admin_repository.dart';
 import '../domain/repositories/auth_repository.dart';
 import '../domain/repositories/course_repository.dart';
 import '../domain/repositories/messenger_repository.dart';
@@ -61,7 +63,10 @@ Future<void> configureDependencies() async {
     () => ScheduleRepositoryImpl(getIt(), getIt()),
   );
   getIt.registerLazySingleton<MessengerRepository>(
-    () => MessengerRepositoryImpl(getIt(), getIt()),
+    () => MessengerRepositoryImpl(getIt(), getIt(), getIt()),
+  );
+  getIt.registerLazySingleton<AdminRepository>(
+    () => AdminRepositoryImpl(getIt(), getIt()),
   );
 
   // Blocs

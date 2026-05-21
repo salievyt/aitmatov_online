@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:async';
 
 import '../../../data/local/local_storage.dart';
 import '../../../domain/entities/messenger/chat_models.dart';
@@ -20,6 +21,8 @@ class _MessengerChatScreenState extends State<MessengerChatScreen> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   late final MessengerBloc _bloc;
+  List<ChatMessage> _liveMessages = const [];
+  StreamSubscription<ChatMessage>? _wsSub;
 
   @override
   void initState() {
@@ -28,11 +31,18 @@ class _MessengerChatScreenState extends State<MessengerChatScreen> {
       GetIt.I<MessengerRepository>(),
       GetIt.I<LocalStorage>(),
     )..add(LoadGroupMessagesRequested(groupId: widget.groupId));
+    _wsSub = GetIt.I<MessengerRepository>().connectGroupStream(widget.groupId).listen((event) {
+      if (!mounted) return;
+      setState(() => _liveMessages = [..._liveMessages, event]);
+      _scrollToBottom();
+    });
   }
 
   @override
   void dispose() {
     _bloc.close();
+    _wsSub?.cancel();
+    GetIt.I<MessengerRepository>().disconnectGroupStream(widget.groupId);
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -108,7 +118,7 @@ class _MessengerChatScreenState extends State<MessengerChatScreen> {
 
           if (state is MessengerGroupChatLoaded) {
             final group = state.group;
-            final messages = state.messages;
+            final messages = [...state.messages, ..._liveMessages];
             final currentUserId = state.currentUserId;
 
             return Scaffold(
@@ -245,7 +255,10 @@ class _MessengerChatScreenState extends State<MessengerChatScreen> {
               ListTile(
                 leading: Icon(Icons.people_outline, color: theme.colorScheme.primary),
                 title: const Text('Участники'),
-                onTap: () => Navigator.pop(ctx),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  context.push('/messenger/group/${group.id}/members');
+                },
               ),
             ],
           ),

@@ -41,6 +41,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           _Entry(icon: Icons.analytics_outlined, title: 'Аналитика платформы', subtitle: 'Регистрации, роли, онлайн, сводные метрики', onTap: () => context.push('/admin/analytics')),
+          _Entry(icon: Icons.feedback_outlined, title: 'Обратная связь', subtitle: 'Сообщения пользователей и их рейтинг', onTap: () => context.push('/admin/feedback')),
+          _Entry(icon: Icons.history_edu_outlined, title: 'Логи системы', subtitle: 'Действия пользователей через /api/logs', onTap: () => context.push('/admin/logs')),
           _Entry(icon: Icons.manage_accounts_outlined, title: 'Управление пользователями', subtitle: 'Пользователи, роли, блокировка/разблокировка', onTap: () => context.push('/admin/users')),
           _Entry(icon: Icons.support_agent_outlined, title: 'Управление учителями', subtitle: 'Быстрый контроль учителей и их доступа', onTap: () => context.push('/admin/users?role=teacher')),
           _Entry(icon: Icons.calendar_month_outlined, title: 'Редактирование расписания', subtitle: 'Создание, изменение и удаление занятий по дням недели', onTap: () => context.push('/admin/schedule')),
