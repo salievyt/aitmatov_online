@@ -3,6 +3,9 @@ import 'package:chucker_flutter/chucker_flutter.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/aitmatov/presentation/aitmatov_screen.dart';
+import '../features/admin/presentation/admin_analytics_screen.dart';
+import '../features/admin/presentation/admin_feedback_screen.dart';
+import '../features/admin/presentation/admin_logs_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/signup_screen.dart';
 import '../features/courses/presentation/course_screen.dart';
@@ -12,7 +15,9 @@ import '../features/lessons/presentation/lesson_screen.dart';
 import '../features/navigation/presentation/role_navigation_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
+import '../features/profile/presentation/feedback_request_screen.dart';
 import '../features/profile/presentation/student_grades_screen.dart';
+import '../features/profile/presentation/user_surveys_screen.dart';
 import '../features/profile/presentation/user_profile_screen.dart';
 import '../features/splash/presentation/splash_screen.dart';
 import '../features/subjects/presentation/subjects_screen.dart';
@@ -88,6 +93,12 @@ class AppRouter {
           path: '/student/grades',
           builder: (context, state) => const StudentGradesScreen()),
       GoRoute(
+          path: '/surveys',
+          builder: (context, state) => const UserSurveysScreen()),
+      GoRoute(
+          path: '/feedback/request',
+          builder: (context, state) => const FeedbackRequestScreen()),
+      GoRoute(
           path: '/teacher/grades',
           builder: (context, state) => const TeacherGradesScreen()),
       GoRoute(
@@ -98,6 +109,15 @@ class AppRouter {
       GoRoute(
           path: '/schedule',
           builder: (context, state) => const ScheduleScreen()),
+      GoRoute(
+          path: '/admin/analytics',
+          builder: (context, state) => const AdminAnalyticsScreen()),
+      GoRoute(
+          path: '/admin/feedback',
+          builder: (context, state) => const AdminFeedbackScreen()),
+      GoRoute(
+          path: '/admin/logs',
+          builder: (context, state) => const AdminLogsScreen()),
       GoRoute(
           path: '/messenger',
           builder: (context, state) => const MessengerGroupsScreen()),
