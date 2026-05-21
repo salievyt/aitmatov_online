@@ -63,7 +63,7 @@ Future<void> configureDependencies() async {
     () => ScheduleRepositoryImpl(getIt(), getIt()),
   );
   getIt.registerLazySingleton<MessengerRepository>(
-    () => MessengerRepositoryImpl(getIt(), getIt()),
+    () => MessengerRepositoryImpl(getIt(), getIt(), getIt()),
   );
   getIt.registerLazySingleton<AdminRepository>(
     () => AdminRepositoryImpl(getIt(), getIt()),

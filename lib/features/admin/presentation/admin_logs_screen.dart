@@ -16,6 +16,23 @@ class _AdminLogsScreenState extends State<AdminLogsScreen> {
   List<AuditLogItem> _logs = const [];
   String _action = '';
 
+  String _actionLabel(String action) {
+    switch (action) {
+      case 'login':
+        return 'Вход в аккаунт';
+      case 'signup':
+        return 'Регистрация';
+      case 'course_published':
+        return 'Публикация курса';
+      case 'lesson_published':
+        return 'Публикация урока';
+      case 'other':
+        return 'Другое действие';
+      default:
+        return action;
+    }
+  }
+
   @override
   void initState() { super.initState(); _load(); }
 
@@ -37,11 +54,11 @@ class _AdminLogsScreenState extends State<AdminLogsScreen> {
             initialValue: _action,
             items: const [
               DropdownMenuItem(value: '', child: Text('Все действия')),
-              DropdownMenuItem(value: 'login', child: Text('login')),
-              DropdownMenuItem(value: 'signup', child: Text('signup')),
-              DropdownMenuItem(value: 'course_published', child: Text('course_published')),
-              DropdownMenuItem(value: 'lesson_published', child: Text('lesson_published')),
-              DropdownMenuItem(value: 'other', child: Text('other')),
+              DropdownMenuItem(value: 'login', child: Text('Вход в аккаунт')),
+              DropdownMenuItem(value: 'signup', child: Text('Регистрация')),
+              DropdownMenuItem(value: 'course_published', child: Text('Публикация курса')),
+              DropdownMenuItem(value: 'lesson_published', child: Text('Публикация урока')),
+              DropdownMenuItem(value: 'other', child: Text('Другое действие')),
             ],
             onChanged: (v) { _action = v ?? ''; _load(); },
           ),
@@ -55,8 +72,8 @@ class _AdminLogsScreenState extends State<AdminLogsScreen> {
                     final log = _logs[i];
                     return Card(
                       child: ListTile(
-                        title: Text('${log.action} • ${log.user}'),
-                        subtitle: Text('${log.targetType ?? '-'}:${log.targetName}\n${log.createdAt ?? ''}'),
+                        title: Text('${_actionLabel(log.action)} • ${log.user}'),
+                        subtitle: Text('Объект: ${log.targetName}\nДата: ${log.createdAt ?? ''}'),
                       ),
                     );
                   },

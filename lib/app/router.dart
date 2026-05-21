@@ -23,6 +23,8 @@ import '../features/splash/presentation/splash_screen.dart';
 import '../features/subjects/presentation/subjects_screen.dart';
 import '../features/messenger/presentation/messenger_groups_screen.dart';
 import '../features/messenger/presentation/messenger_chat_screen.dart';
+import '../features/messenger/presentation/group_members_screen.dart';
+import '../features/messenger/presentation/channel_members_screen.dart';
 import '../features/teacher/presentation/teacher_grades_screen.dart';
 
 class AppRouter {
@@ -127,10 +129,18 @@ class AppRouter {
             MessengerChatScreen(groupId: state.pathParameters['groupId'] ?? ''),
       ),
       GoRoute(
+        path: '/messenger/group/:groupId/members',
+        builder: (context, state) => GroupMembersScreen(groupId: state.pathParameters['groupId'] ?? ''),
+      ),
+      GoRoute(
         path: '/messenger/channel/:channelId',
         builder: (context, state) => MessengerChannelChatScreen(
           channelId: state.pathParameters['channelId'] ?? '',
         ),
+      ),
+      GoRoute(
+        path: '/messenger/channel/:channelId/members',
+        builder: (context, state) => ChannelMembersScreen(channelId: state.pathParameters['channelId'] ?? ''),
       ),
     ],
   );

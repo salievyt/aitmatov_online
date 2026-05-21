@@ -11,6 +11,9 @@ abstract class MessengerRepository {
   Future<Either<Failure, List<ChatMessage>>> getGroupMessages(String groupId);
   Future<Either<Failure, void>> sendGroupMessage(String groupId, ChatMessage message);
   Future<Either<Failure, void>> setLeader(String groupId, int userId);
+  Future<Either<Failure, List<ChatMember>>> getGroupMembers(String groupId);
+  Stream<ChatMessage> connectGroupStream(String groupId);
+  Future<void> disconnectGroupStream(String groupId);
 
   // Channels
   Future<Either<Failure, List<Channel>>> getChannels();
@@ -20,4 +23,7 @@ abstract class MessengerRepository {
   Future<Either<Failure, void>> deleteChannel(String channelId);
   Future<Either<Failure, List<ChannelMessage>>> getChannelMessages(String channelId);
   Future<Either<Failure, void>> sendChannelMessage(String channelId, ChannelMessage message);
+  Future<Either<Failure, List<ChatMember>>> getChannelMembers(String channelId);
+  Stream<ChannelMessage> connectChannelStream(String channelId);
+  Future<void> disconnectChannelStream(String channelId);
 }

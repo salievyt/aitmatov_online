@@ -15,6 +15,38 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen> {
   bool _loading = true;
   List<FeedbackSubmissionItem> _items = const [];
 
+  String _typeLabel(String type) {
+    switch (type) {
+      case 'idea':
+        return 'Идея';
+      case 'bug':
+        return 'Ошибка';
+      case 'complaint':
+        return 'Жалоба';
+      case 'support':
+        return 'Поддержка';
+      case 'general':
+        return 'Общее';
+      default:
+        return type;
+    }
+  }
+
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'new':
+        return 'Новое';
+      case 'in_progress':
+        return 'В работе';
+      case 'resolved':
+        return 'Решено';
+      case 'closed':
+        return 'Закрыто';
+      default:
+        return status;
+    }
+  }
+
   @override
   void initState() { super.initState(); _load(); }
 
@@ -58,7 +90,7 @@ class _AdminFeedbackScreenState extends State<AdminFeedbackScreen> {
                 return Card(
                   child: ListTile(
                     title: Text(item.subject),
-                    subtitle: Text('${item.feedbackType} • ${item.status}\n${item.message}', maxLines: 3, overflow: TextOverflow.ellipsis),
+                    subtitle: Text('${_typeLabel(item.feedbackType)} • ${_statusLabel(item.status)}\n${item.message}', maxLines: 3, overflow: TextOverflow.ellipsis),
                     trailing: item.rating != null ? Chip(label: Text('★${item.rating}')) : null,
                   ),
                 );
