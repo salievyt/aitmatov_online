@@ -1,7 +1,9 @@
 import 'package:aitmatov_app/core/errors/failures.dart';
 import 'package:aitmatov_app/core/network/network_info.dart';
 import 'package:aitmatov_app/data/dto/progress_dto.dart';
+import 'package:aitmatov_app/data/dto/quarter_grade_dto.dart';
 import 'package:aitmatov_app/domain/entities/progress_item.dart';
+import 'package:aitmatov_app/domain/entities/quarter_grade.dart';
 import 'package:aitmatov_app/domain/repositories/progress_repository.dart';
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
@@ -49,6 +51,56 @@ class ProgressRepositoryImpl implements ProgressRepository {
         if (notes != null) 'notes': notes,
       });
       final item = ProgressDto.fromJson(response.data as Map<String, dynamic>).toEntity();
+      return Right(item);
+    } on DioException catch (e) {
+      return Left(NetworkFailure(e.message ?? 'Ошибка сети'));
+    } catch (e) {
+      return const Left(ServerFailure());
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<QuarterGrade>>> getQuarterGrades({int? userId}) async {
+    if (!await _networkInfo.isConnected) {
+      return const Left(NetworkFailure());
+    }
+    try {
+      final response = await _dio.get(
+        '/progress/grades/',
+        queryParameters: userId != null ? {'user': userId} : null,
+      );
+      final results = (response.data['results'] ?? response.data) as List<dynamic>;
+      final items = results
+          .map((e) => QuarterGradeDto.fromJson(e as Map<String, dynamic>).toEntity())
+          .toList();
+      return Right(items);
+    } on DioException catch (e) {
+      return Left(NetworkFailure(e.message ?? 'Ошибка сети'));
+    } catch (e) {
+      return const Left(ServerFailure());
+    }
+  }
+
+  @override
+  Future<Either<Failure, QuarterGrade>> createQuarterGrade({
+    required int userId,
+    required int courseId,
+    required int quarter,
+    required int grade,
+    String? notes,
+  }) async {
+    if (!await _networkInfo.isConnected) {
+      return const Left(NetworkFailure());
+    }
+    try {
+      final response = await _dio.post('/progress/grades/', data: {
+        'user': userId,
+        'course': courseId,
+        'quarter': quarter,
+        'grade': grade,
+        if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+      });
+      final item = QuarterGradeDto.fromJson(response.data as Map<String, dynamic>).toEntity();
       return Right(item);
     } on DioException catch (e) {
       return Left(NetworkFailure(e.message ?? 'Ошибка сети'));

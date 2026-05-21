@@ -1,3 +1,4 @@
+import 'package:chucker_flutter/chucker_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -359,29 +360,49 @@ class _ProfileScreenState extends State<ProfileScreen>
                           const SizedBox(height: AppSpacing.sectionSpacing),
                           _buildRoleFeaturesCard(theme, user, isDark),
                           const SizedBox(height: AppSpacing.sectionSpacing),
-                          if (user.isTeacher) ...[
+                          if (user.isStudent) ...[
                             _buildActionButton(
                               theme: theme,
                               isDark: isDark,
-                              icon: Icons.dashboard_outlined,
-                              label: 'Открыть кабинет преподавателя',
-                              onTap: () => context.push('/teacher'),
-                              color: theme.colorScheme.secondary,
+                              icon: Icons.grade_outlined,
+                              label: 'Мои оценки',
+                              onTap: () => context.push('/student/grades'),
+                              color: Colors.green,
                             ),
                             const SizedBox(height: AppSpacing.itemSpacing),
                           ],
-                          if (user.isAdmin) ...[
-                            _buildActionButton(
-                              theme: theme,
-                              isDark: isDark,
-                              icon: Icons.admin_panel_settings_outlined,
-                              label: 'Открыть панель администратора',
-                              onTap: () => context.push('/admin'),
-                              color: theme.colorScheme.primary,
-                            ),
-                            const SizedBox(height: AppSpacing.itemSpacing),
-                          ],
-                          // if (kDebugMode) ...[
+                          // if (user.isTeacher) ...[
+                          //   _buildActionButton(
+                          //     theme: theme,
+                          //     isDark: isDark,
+                          //     icon: Icons.dashboard_outlined,
+                          //     label: 'Открыть кабинет преподавателя',
+                          //     onTap: () => context.push('/teacher'),
+                          //     color: theme.colorScheme.secondary,
+                          //   ),
+                          //   const SizedBox(height: AppSpacing.itemSpacing),
+                          //   _buildActionButton(
+                          //     theme: theme,
+                          //     isDark: isDark,
+                          //     icon: Icons.fact_check_outlined,
+                          //     label: 'Оценки учеников',
+                          //     onTap: () => context.push('/teacher/grades'),
+                          //     color: Colors.orange,
+                          //   ),
+                          //   const SizedBox(height: AppSpacing.itemSpacing),
+                          // ],
+                          // if (user.isAdmin) ...[
+                          //   _buildActionButton(
+                          //     theme: theme,
+                          //     isDark: isDark,
+                          //     icon: Icons.admin_panel_settings_outlined,
+                          //     label: 'Открыть панель администратора',
+                          //     onTap: () => context.push('/admin'),
+                          //     color: theme.colorScheme.primary,
+                          //   ),
+                          //   const SizedBox(height: AppSpacing.itemSpacing),
+                          // ],
+                          // if (user.isAdmin) ...[
                           //   _buildActionButton(
                           //     theme: theme,
                           //     isDark: isDark,

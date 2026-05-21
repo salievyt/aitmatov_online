@@ -39,6 +39,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           _Entry(icon: Icons.menu_book_outlined, title: 'Мои курсы и уроки', subtitle: 'Только ваши темы и уроки', onTap: () => context.push('/teacher/courses')),
+          _Entry(icon: Icons.fact_check_outlined, title: 'Оценки учеников', subtitle: 'Список учеников и выставление оценок', onTap: () => context.push('/teacher/grades')),
           _Entry(icon: Icons.analytics_outlined, title: 'Аналитика класса', subtitle: 'Прогресс и завершения по вашим курсам', onTap: () => context.push('/teacher/analytics')),
           _Entry(icon: Icons.mic_outlined, title: 'Голосовые сообщения', subtitle: 'Коммуникация с учениками', onTap: () => context.push('/teacher/messages')),
         ],

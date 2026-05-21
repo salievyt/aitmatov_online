@@ -12,11 +12,13 @@ import '../features/lessons/presentation/lesson_screen.dart';
 import '../features/navigation/presentation/role_navigation_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
+import '../features/profile/presentation/student_grades_screen.dart';
 import '../features/profile/presentation/user_profile_screen.dart';
 import '../features/splash/presentation/splash_screen.dart';
 import '../features/subjects/presentation/subjects_screen.dart';
 import '../features/messenger/presentation/messenger_groups_screen.dart';
 import '../features/messenger/presentation/messenger_chat_screen.dart';
+import '../features/teacher/presentation/teacher_grades_screen.dart';
 
 class AppRouter {
   static final router = GoRouter(
@@ -82,6 +84,12 @@ class AppRouter {
       ),
       GoRoute(
           path: '/profile', builder: (context, state) => const ProfileScreen()),
+      GoRoute(
+          path: '/student/grades',
+          builder: (context, state) => const StudentGradesScreen()),
+      GoRoute(
+          path: '/teacher/grades',
+          builder: (context, state) => const TeacherGradesScreen()),
       GoRoute(
         path: '/users/:id/profile',
         builder: (context, state) => UserProfileScreen(
