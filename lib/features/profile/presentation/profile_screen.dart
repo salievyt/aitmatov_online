@@ -427,14 +427,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                             const SizedBox(height: AppSpacing.itemSpacing),
                           ],
                           if (user.isAdmin) ...[
-                            _buildActionButton(
-                              theme: theme,
-                              isDark: isDark,
-                              icon: Icons.admin_panel_settings_outlined,
-                              label: 'Открыть панель администратора',
-                              onTap: () => context.push('/admin'),
-                              color: theme.colorScheme.primary,
-                            ),
                             const SizedBox(height: AppSpacing.itemSpacing),
                             _buildActionButton(
                               theme: theme,
