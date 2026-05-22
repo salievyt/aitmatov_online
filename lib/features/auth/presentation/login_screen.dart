@@ -198,7 +198,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         hintText: 'example@mail.com',
                         prefixIcon: Icons.email_outlined,
                         keyboardType: TextInputType.emailAddress,
-                        onChanged: (_) => setState(() {}),
                       ),
                     ),
 
@@ -220,7 +219,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           ),
                           onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                         ),
-                        onChanged: (_) => setState(() {}),
                       ),
                     ),
 

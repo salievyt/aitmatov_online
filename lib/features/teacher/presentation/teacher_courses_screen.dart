@@ -47,6 +47,7 @@ class _TeacherCoursesScreenState extends State<TeacherCoursesScreen>
     User? current;
     me.fold((_) {}, (u) => current = u);
     if (current == null) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
       return;
     }
@@ -55,6 +56,7 @@ class _TeacherCoursesScreenState extends State<TeacherCoursesScreen>
     result.fold((_) {}, (courses) {
       _courses = courses.where((c) => c.teacherId == current!.id).toList();
     });
+    if (!mounted) return;
     setState(() => _isLoading = false);
     _animationController.forward();
   }

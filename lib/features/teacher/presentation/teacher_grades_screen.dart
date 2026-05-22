@@ -246,8 +246,8 @@ class _TeacherGradesScreenState extends State<TeacherGradesScreen>
 
     if (saved != true || selectedCourseId == null || !mounted) return;
 
-    final messenger = ScaffoldMessenger.of(context);
-    final result = await context.read<ProgressRepository>().createQuarterGrade(
+    final repository = context.read<ProgressRepository>();
+    final result = await repository.createQuarterGrade(
           userId: student.id,
           courseId: selectedCourseId!,
           quarter: selectedQuarter,
@@ -256,6 +256,8 @@ class _TeacherGradesScreenState extends State<TeacherGradesScreen>
         );
 
     if (!mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
     result.fold(
       (f) => messenger.showSnackBar(
         SnackBar(

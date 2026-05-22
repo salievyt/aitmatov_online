@@ -92,6 +92,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   snap: true,
                   expandedHeight: 120,
                   backgroundColor: theme.scaffoldBackgroundColor,
+                  actions: [
+                    IconButton(
+                      icon: const Icon(Icons.search),
+                      onPressed: () => showSearch(
+                        context: context,
+                        delegate: SubjectSearchDelegate(subjects),
+                      ),
+                      tooltip: 'Поиск предметов',
+                    ),
+                  ],
                   flexibleSpace: FlexibleSpaceBar(
                     title: Text(
                       'Айтматов онлайн',
@@ -556,6 +566,202 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ],
         ),
       ),
+    );
+  }
+
+  Color _getColorForIndex(ThemeData theme, int index) {
+    final colors = [
+      theme.colorScheme.primary,
+      theme.colorScheme.secondary,
+      theme.colorScheme.tertiary,
+      Colors.orange,
+      Colors.purple,
+      Colors.teal,
+    ];
+    return colors[index % colors.length];
+  }
+
+  IconData _iconFromName(String? name) {
+    switch (name) {
+      case 'calculate':
+        return Icons.calculate;
+      case 'science':
+        return Icons.science;
+      case 'history':
+        return Icons.history_edu;
+      case 'book':
+        return Icons.book;
+      case 'nature':
+        return Icons.nature;
+      case 'language':
+        return Icons.language;
+      default:
+        return Icons.school;
+    }
+  }
+}
+
+/// Делегат поиска предметов
+class SubjectSearchDelegate extends SearchDelegate<Subject?> {
+  final List<Subject> subjects;
+
+  SubjectSearchDelegate(this.subjects);
+
+  @override
+  String get searchFieldLabel => 'Поиск предметов';
+
+  @override
+  List<Widget> buildActions(BuildContext context) {
+    return [
+      IconButton(
+        icon: const Icon(Icons.clear),
+        onPressed: () => query = '',
+        tooltip: 'Очистить',
+      ),
+    ];
+  }
+
+  @override
+  Widget buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () => close(context, null),
+      tooltip: 'Назад',
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return _buildSearchResults(context);
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return _buildSearchResults(context);
+  }
+
+  Widget _buildSearchResults(BuildContext context) {
+    final theme = Theme.of(context);
+    final results = subjects
+        .where((s) => s.title.toLowerCase().contains(query.toLowerCase()))
+        .toList();
+
+    if (query.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search,
+              size: 64,
+              color: theme.colorScheme.onSurface.withOpacity(0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Введите название предмета',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (results.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_off,
+              size: 64,
+              color: theme.colorScheme.onSurface.withOpacity(0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Ничего не найдено',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Попробуйте изменить запрос',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.5),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: results.length,
+      itemBuilder: (context, index) {
+        final subject = results[index];
+        final color = _getColorForIndex(theme, index);
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: AnimatedCard(
+            onTap: () {
+              close(context, subject);
+              context.push('/subject/${subject.id}');
+            },
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                color.withOpacity(0.15),
+                color.withOpacity(0.05),
+              ],
+            ),
+            border: Border.all(
+              color: color.withOpacity(0.3),
+              width: 1.5,
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [color, color.withOpacity(0.7)],
+                    ),
+                  ),
+                  child: Icon(
+                    _iconFromName(subject.iconName),
+                    size: 24,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    subject.title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: theme.colorScheme.onSurface.withOpacity(0.4),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

@@ -46,6 +46,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   Future<void> _load() async {
     final me = await context.read<AuthRepository>().getCurrentUser(forceRefresh: true);
     me.fold((_) {}, (u) => _user = u);
+    if (!mounted) return;
     setState(() => _isLoading = false);
     _animationController.forward();
   }
@@ -284,30 +285,55 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   Widget _buildStatsSection(ThemeData theme, bool isDark) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildStatCard(
-            theme: theme,
-            isDark: isDark,
-            icon: Icons.people_outline,
-            value: '156',
-            label: 'Пользователей',
-            color: theme.colorScheme.primary,
-          ),
+    // TODO: Заменить на реальные данные из API
+    // Временно скрыто до готовности backend
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.amber.withOpacity(0.15),
+            Colors.amber.withOpacity(0.05),
+          ],
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildStatCard(
-            theme: theme,
-            isDark: isDark,
-            icon: Icons.school_outlined,
-            value: '12',
-            label: 'Учителей',
-            color: theme.colorScheme.secondary,
-          ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.amber.withOpacity(0.3),
+          width: 1.5,
         ),
-      ],
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.construction,
+            size: 32,
+            color: Colors.amber,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Статистика в разработке',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Скоро здесь появится реальная статистика по пользователям и учителям',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
