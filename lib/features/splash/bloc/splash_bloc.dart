@@ -17,18 +17,26 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
 
   Future<void> _onSplashStarted(SplashStarted event, Emitter<SplashState> emit) async {
     emit(SplashLoading());
-    await Future.delayed(const Duration(seconds: 2));
+
+    // Use minimum splash time (800ms) in parallel with auth check
+    // This ensures smooth UX without artificial delays
+    final minSplashTime = Future.delayed(const Duration(milliseconds: 800));
 
     final isFirstLaunch = _localStorage.getFirstLaunch() ?? true;
     final onboardingCompleted = _localStorage.getOnboardingCompleted();
 
     if (isFirstLaunch || !onboardingCompleted) {
+      await minSplashTime;
       await _localStorage.setFirstLaunch(false);
       emit(SplashOnboardingRequired());
       return;
     }
 
     final isAuth = await _authRepository.isAuthenticated();
+
+    // Wait for minimum splash time to complete
+    await minSplashTime;
+
     if (isAuth) {
       emit(SplashAuthenticated());
     } else {

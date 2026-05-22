@@ -43,7 +43,9 @@ Future<void> configureDependencies() async {
   await secureStorage.migrateFromSharedPreferences();
   getIt.registerLazySingleton<SecureLocalStorage>(() => secureStorage);
 
-  final dio = DioClient().dio;
+  // Create DioClient with SecureLocalStorage for automatic token injection
+  final dioClient = DioClient(secureStorage: secureStorage);
+  final dio = dioClient.dio;
   getIt.registerLazySingleton<Dio>(() => dio);
 
   getIt.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl());

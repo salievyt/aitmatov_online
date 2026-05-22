@@ -2,6 +2,8 @@ import 'package:chucker_flutter/chucker_flutter.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../data/local/secure_local_storage.dart';
+
 class DioClient {
   static const String _rawBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
@@ -11,6 +13,7 @@ class DioClient {
   static const int _timeoutSeconds = 15;
 
   late final Dio dio;
+  final SecureLocalStorage? _secureStorage;
 
   String get _baseUrl {
     final trimmed = _rawBaseUrl.trim().replaceAll(RegExp(r'/+$'), '');
@@ -18,7 +21,7 @@ class DioClient {
     return '$trimmed/api';
   }
 
-  DioClient() {
+  DioClient({SecureLocalStorage? secureStorage}) : _secureStorage = secureStorage {
     dio = Dio(
       BaseOptions(
         baseUrl: _baseUrl,
@@ -33,7 +36,7 @@ class DioClient {
     );
 
     final interceptors = <Interceptor>[
-      _AuthInterceptor(),
+      if (_secureStorage != null) _AuthInterceptor(_secureStorage!),
       _ErrorInterceptor(),
     ];
 
@@ -44,18 +47,35 @@ class DioClient {
     dio.interceptors.addAll(interceptors);
   }
 
+  /// Set authorization token (for backward compatibility)
+  /// Prefer using AuthInterceptor for automatic token injection
   void setToken(String token) {
     dio.options.headers['Authorization'] = 'Bearer $token';
   }
 
+  /// Clear authorization token
   void clearToken() {
     dio.options.headers.remove('Authorization');
   }
 }
 
 class _AuthInterceptor extends Interceptor {
+  final SecureLocalStorage _secureStorage;
+
+  _AuthInterceptor(this._secureStorage);
+
   @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+  Future<void> onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+    // Read token from secure storage for each request
+    // This prevents race conditions from multiple repositories modifying shared Dio instance
+    try {
+      final token = await _secureStorage.getToken();
+      if (token != null && token.isNotEmpty) {
+        options.headers['Authorization'] = 'Bearer $token';
+      }
+    } catch (e) {
+      debugPrint('Failed to read token in AuthInterceptor: $e');
+    }
     handler.next(options);
   }
 }

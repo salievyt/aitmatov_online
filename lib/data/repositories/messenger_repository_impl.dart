@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../core/errors/failures.dart';
 import '../../core/network/network_info.dart';
@@ -22,7 +23,24 @@ class MessengerRepositoryImpl implements MessengerRepository {
   final Map<String, WebSocket> _channelSockets = {};
   final Map<String, StreamController<ChannelMessage>> _channelControllers = {};
 
+  bool _disposed = false;
+
   MessengerRepositoryImpl(this._dio, this._networkInfo, this._localStorage);
+
+  /// Dispose all resources to prevent memory leaks
+  Future<void> dispose() async {
+    _disposed = true;
+
+    // Close all group connections
+    for (final groupId in _groupSockets.keys.toList()) {
+      await disconnectGroupStream(groupId);
+    }
+
+    // Close all channel connections
+    for (final channelId in _channelSockets.keys.toList()) {
+      await disconnectChannelStream(channelId);
+    }
+  }
 
   @override
   Future<Either<Failure, List<ChatGroup>>> getGroups() async { if (!await _networkInfo.isConnected) return const Left(NetworkFailure()); try { final response = await _dio.get('/messenger/groups/'); final data = response.data; final List<dynamic> results = data is Map<String, dynamic> ? ((data['results'] ?? <dynamic>[]) as List<dynamic>) : (data is List<dynamic> ? data : []); return Right(results.map((e) => _parseChatGroup(e as Map<String, dynamic>)).toList()); } on DioException catch (e) { return Left(NetworkFailure(e.message ?? 'Ошибка сети')); } catch (_) { return const Left(ServerFailure()); } }
@@ -58,6 +76,9 @@ class MessengerRepositoryImpl implements MessengerRepository {
 
   @override
   Stream<ChatMessage> connectGroupStream(String groupId) {
+    if (_disposed) {
+      throw StateError('MessengerRepository has been disposed');
+    }
     if (_groupControllers[groupId] != null) return _groupControllers[groupId]!.stream;
     final controller = StreamController<ChatMessage>.broadcast();
     _groupControllers[groupId] = controller;
@@ -66,6 +87,8 @@ class MessengerRepositoryImpl implements MessengerRepository {
   }
 
   Future<void> _connectGroupSocket(String groupId, StreamController<ChatMessage> controller) async {
+    if (_disposed) return;
+
     try {
       final uri = _wsUri('/ws/messenger/$groupId/');
       final token = await _localStorage.getToken();
@@ -77,8 +100,14 @@ class MessengerRepositoryImpl implements MessengerRepository {
             : null,
       );
 
+      if (_disposed) {
+        await socket.close();
+        return;
+      }
+
       _groupSockets[groupId] = socket;
       socket.listen((event) {
+        if (_disposed) return;
         final payload = _decodeEvent(event);
         if (payload != null) {
           final messageType = payload['type'];
@@ -91,16 +120,29 @@ class MessengerRepositoryImpl implements MessengerRepository {
         }
       }, onDone: () {
         _groupSockets.remove(groupId);
-        _reconnectGroupSocket(groupId, controller);
-      }, onError: (_) {
+        if (!_disposed) {
+          _reconnectGroupSocket(groupId, controller);
+        }
+      }, onError: (error, stackTrace) {
+        debugPrint('WebSocket error for group $groupId: $error');
         _groupSockets.remove(groupId);
-        _reconnectGroupSocket(groupId, controller);
+        if (!_disposed) {
+          _reconnectGroupSocket(groupId, controller);
+        }
       });
-    } catch (_) {}
+    } catch (e, stackTrace) {
+      debugPrint('Failed to connect WebSocket for group $groupId: $e');
+      debugPrint('Stack trace: $stackTrace');
+      if (!_disposed) {
+        _reconnectGroupSocket(groupId, controller);
+      }
+    }
   }
 
   void _reconnectGroupSocket(String groupId, StreamController<ChatMessage> controller) {
+    if (_disposed) return;
     Future.delayed(const Duration(seconds: 3), () {
+      if (_disposed) return;
       if (_groupControllers[groupId] == controller) {
         _connectGroupSocket(groupId, controller);
       }
@@ -154,6 +196,9 @@ class MessengerRepositoryImpl implements MessengerRepository {
 
   @override
   Stream<ChannelMessage> connectChannelStream(String channelId) {
+    if (_disposed) {
+      throw StateError('MessengerRepository has been disposed');
+    }
     if (_channelControllers[channelId] != null) return _channelControllers[channelId]!.stream;
     final controller = StreamController<ChannelMessage>.broadcast();
     _channelControllers[channelId] = controller;
@@ -162,6 +207,8 @@ class MessengerRepositoryImpl implements MessengerRepository {
   }
 
   Future<void> _connectChannelSocket(String channelId, StreamController<ChannelMessage> controller) async {
+    if (_disposed) return;
+
     try {
       final uri = _wsUri('/ws/messenger/channels/$channelId/');
       final token = await _localStorage.getToken();
@@ -173,8 +220,14 @@ class MessengerRepositoryImpl implements MessengerRepository {
             : null,
       );
 
+      if (_disposed) {
+        await socket.close();
+        return;
+      }
+
       _channelSockets[channelId] = socket;
       socket.listen((event) {
+        if (_disposed) return;
         final payload = _decodeEvent(event);
         if (payload != null) {
           final messageType = payload['type'];
@@ -187,16 +240,29 @@ class MessengerRepositoryImpl implements MessengerRepository {
         }
       }, onDone: () {
         _channelSockets.remove(channelId);
-        _reconnectChannelSocket(channelId, controller);
-      }, onError: (_) {
+        if (!_disposed) {
+          _reconnectChannelSocket(channelId, controller);
+        }
+      }, onError: (error, stackTrace) {
+        debugPrint('WebSocket error for channel $channelId: $error');
         _channelSockets.remove(channelId);
-        _reconnectChannelSocket(channelId, controller);
+        if (!_disposed) {
+          _reconnectChannelSocket(channelId, controller);
+        }
       });
-    } catch (_) {}
+    } catch (e, stackTrace) {
+      debugPrint('Failed to connect WebSocket for channel $channelId: $e');
+      debugPrint('Stack trace: $stackTrace');
+      if (!_disposed) {
+        _reconnectChannelSocket(channelId, controller);
+      }
+    }
   }
 
   void _reconnectChannelSocket(String channelId, StreamController<ChannelMessage> controller) {
+    if (_disposed) return;
     Future.delayed(const Duration(seconds: 3), () {
+      if (_disposed) return;
       if (_channelControllers[channelId] == controller) {
         _connectChannelSocket(channelId, controller);
       }
@@ -214,9 +280,30 @@ class MessengerRepositoryImpl implements MessengerRepository {
   Uri _wsUri(String path) {
     final base = Uri.parse(_dio.options.baseUrl);
     final scheme = base.scheme == 'https' ? 'wss' : 'ws';
-    // Удаляем /api из пути для WebSocket
+
+    // Remove /api from base path for WebSocket connections
+    String basePath = base.path;
+    if (basePath.endsWith('/api')) {
+      basePath = basePath.substring(0, basePath.length - 4);
+    }
+
+    // Ensure path starts with /
     final wsPath = path.startsWith('/') ? path : '/$path';
-    return Uri(scheme: scheme, host: base.host, port: base.hasPort ? base.port : null, path: wsPath);
+
+    // Combine base path with WebSocket path
+    final fullPath = basePath.isEmpty || basePath == '/'
+        ? wsPath
+        : '$basePath$wsPath';
+
+    // Preserve explicit port, don't default to 80/443
+    final port = base.hasPort ? base.port : null;
+
+    return Uri(
+      scheme: scheme,
+      host: base.host,
+      port: port,
+      path: fullPath,
+    );
   }
 
   Map<String, dynamic>? _decodeEvent(dynamic event) {

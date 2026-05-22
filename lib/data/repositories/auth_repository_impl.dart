@@ -32,7 +32,7 @@ class AuthRepositoryImpl implements AuthRepository {
       final refreshToken = responseBody['refresh'] as String?;
       if (token != null) {
         await _localStorage.setToken(token);
-        _dio.options.headers['Authorization'] = 'Bearer $token';
+        // Token will be automatically injected by AuthInterceptor on next request
       }
       if (refreshToken != null) {
         await _localStorage.setRefreshToken(refreshToken);
@@ -72,7 +72,7 @@ class AuthRepositoryImpl implements AuthRepository {
       final refreshToken = responseBody['refresh'] as String?;
       if (token != null) {
         await _localStorage.setToken(token);
-        _dio.options.headers['Authorization'] = 'Bearer $token';
+        // Token will be automatically injected by AuthInterceptor on next request
       }
       if (refreshToken != null) {
         await _localStorage.setRefreshToken(refreshToken);
@@ -102,7 +102,7 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       await _localStorage.clearToken();
       await _localStorage.clearCachedUser();
-      _dio.options.headers.remove('Authorization');
+      // Token will be automatically removed from requests by AuthInterceptor
       return const Right(null);
     } catch (e) {
       return const Left(CacheFailure());
@@ -138,11 +138,8 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<bool> isAuthenticated() async {
     final token = await _localStorage.getToken();
-    if (token != null && token.isNotEmpty) {
-      _dio.options.headers['Authorization'] = 'Bearer $token';
-      return true;
-    }
-    return false;
+    // Token will be automatically injected by AuthInterceptor if present
+    return token != null && token.isNotEmpty;
   }
 
   @override

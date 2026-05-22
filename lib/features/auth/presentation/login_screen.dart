@@ -74,10 +74,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   }
 
   bool _isValidEmail(String email) {
-    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+    // RFC 5322 compliant email validation with length check
+    if (email.length > 254) return false;
+    return RegExp(
+      r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$",
+    ).hasMatch(email);
   }
 
   void _showErrorSnackBar(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -110,6 +115,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               if (!context.mounted) return;
               context.go(path);
             } else if (state is AuthError) {
+              if (!context.mounted) return;
+              final theme = Theme.of(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(state.message),

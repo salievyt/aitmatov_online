@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -27,19 +28,45 @@ class SecureLocalStorage {
     final migrated = _prefs.getBool(_migrationKey) ?? false;
     if (migrated) return;
 
-    final oldToken = _prefs.getString(_tokenKey);
-    if (oldToken != null && oldToken.isNotEmpty) {
-      await _secureStorage.write(key: _tokenKey, value: oldToken);
-      await _prefs.remove(_tokenKey);
-    }
+    try {
+      // Migrate access token with atomic write-verify-delete pattern
+      final oldToken = _prefs.getString(_tokenKey);
+      if (oldToken != null && oldToken.isNotEmpty) {
+        // Step 1: Write to secure storage
+        await _secureStorage.write(key: _tokenKey, value: oldToken);
 
-    final oldRefreshToken = _prefs.getString(_refreshTokenKey);
-    if (oldRefreshToken != null && oldRefreshToken.isNotEmpty) {
-      await _secureStorage.write(key: _refreshTokenKey, value: oldRefreshToken);
-      await _prefs.remove(_refreshTokenKey);
-    }
+        // Step 2: Verify the write was successful
+        final verifyToken = await _secureStorage.read(key: _tokenKey);
+        if (verifyToken == oldToken) {
+          // Step 3: Only delete from SharedPreferences after verification
+          await _prefs.remove(_tokenKey);
+        } else {
+          // Verification failed, log error but don't delete old token
+          debugPrint('Token migration verification failed, keeping fallback in SharedPreferences');
+        }
+      }
 
-    await _prefs.setBool(_migrationKey, true);
+      // Migrate refresh token with same atomic pattern
+      final oldRefreshToken = _prefs.getString(_refreshTokenKey);
+      if (oldRefreshToken != null && oldRefreshToken.isNotEmpty) {
+        await _secureStorage.write(key: _refreshTokenKey, value: oldRefreshToken);
+
+        final verifyRefreshToken = await _secureStorage.read(key: _refreshTokenKey);
+        if (verifyRefreshToken == oldRefreshToken) {
+          await _prefs.remove(_refreshTokenKey);
+        } else {
+          debugPrint('Refresh token migration verification failed, keeping fallback in SharedPreferences');
+        }
+      }
+
+      // Mark migration as complete only if we got this far
+      await _prefs.setBool(_migrationKey, true);
+    } catch (e, stackTrace) {
+      // Log error but don't mark as migrated - will retry next time
+      debugPrint('Token migration failed: $e');
+      debugPrint('Stack trace: $stackTrace');
+      // Don't set migration flag, so it will retry on next app start
+    }
   }
 
   Future<void> setToken(String token) async {
@@ -47,7 +74,13 @@ class SecureLocalStorage {
   }
 
   Future<String?> getToken() async {
-    return await _secureStorage.read(key: _tokenKey);
+    try {
+      return await _secureStorage.read(key: _tokenKey);
+    } catch (e) {
+      debugPrint('Error reading token from secure storage: $e');
+      // DO NOT fallback to insecure storage - force re-authentication
+      return null;
+    }
   }
 
   Future<void> setRefreshToken(String token) async {
@@ -55,7 +88,23 @@ class SecureLocalStorage {
   }
 
   Future<String?> getRefreshToken() async {
-    return await _secureStorage.read(key: _refreshTokenKey);
+    try {
+      final token = await _secureStorage.read(key: _refreshTokenKey);
+      if (token != null && token.isNotEmpty) return token;
+
+      // Fallback to SharedPreferences if secure storage is empty
+      final fallbackToken = _prefs.getString(_refreshTokenKey);
+      if (fallbackToken != null && fallbackToken.isNotEmpty) {
+        debugPrint('Using fallback refresh token from SharedPreferences');
+        return fallbackToken;
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('Error reading refresh token from secure storage: $e');
+      // Try fallback on error
+      return _prefs.getString(_refreshTokenKey);
+    }
   }
 
   Future<void> clearToken() async {
