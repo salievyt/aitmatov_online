@@ -1,15 +1,26 @@
+import 'package:aitmatov_app/core/constans/app_colors.dart';
+import 'package:aitmatov_app/core/constans/app_sizes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/presentation/controllers/async_controller.dart';
-import '../../../core/constans/app_colors.dart';
-import '../../../core/constans/app_sizes.dart';
+import '../../../core/presentation/widgets/animated_button.dart';
+import '../../../core/presentation/widgets/animated_card.dart';
+import '../../../core/presentation/widgets/animated_widgets.dart';
+import '../../../core/presentation/widgets/improved_text_field.dart';
 import '../../../core/constans/app_spacing.dart';
-import '../../../core/constans/app_typography.dart';
 import '../../../domain/entities/user.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../../auth/bloc/auth_bloc.dart';
 
+/// Современный экран профиля с улучшенным UX/UI
+/// Применяет:
+/// - Правило пика и завершения (запоминающиеся моменты)
+/// - Визуальная иерархия с градиентами и тенями
+/// - Микровзаимодействия для всех элементов
+/// - Каскадные анимации появления
+/// - Информативные карточки статистики
+/// - Улучшенная навигация по разделам
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -55,248 +66,156 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   void _showLogoutDialog() {
+    final theme = Theme.of(context);
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSizes.dialogRadius)),
-        elevation: AppSizes.elevationDialog,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppSizes.dialogRadius),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.dialogWhite,
-                Colors.grey.shade50,
-              ],
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.dialogPaddingDefault),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: AppSizes.iconContainerSize,
-                  height: AppSizes.iconContainerSize,
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade100,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
-                  ),
-                  child: Icon(
-                    Icons.logout_rounded,
-                    size: AppSizes.iconXL,
-                    color: Colors.red.shade700,
-                  ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.red.shade100,
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                const SizedBox(height: AppSpacing.sectionSpacing),
-                Text(
-                  'Выход из аккаунта',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                child: Icon(
+                  Icons.logout_rounded,
+                  size: 40,
+                  color: Colors.red.shade700,
                 ),
-                const SizedBox(height: AppSpacing.itemSpacing),
-                Text(
-                  'Вы уверены, что хотите выйти?',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Выход из аккаунта',
+                style: theme.textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Вы уверены, что хотите выйти?',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurface.withOpacity(0.6),
                 ),
-                const SizedBox(height: AppSpacing.dialogPaddingDefault),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: AppSpacing.buttonPaddingVertical),
-                          shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppSizes.buttonRadius)),
-                          side: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: Text(
-                          'Отмена',
-                          style: TextStyle(
-                            fontSize: AppTypography.buttonTextSize,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                      ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: AnimatedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      isOutlined: true,
+                      child: const Text('Отмена'),
                     ),
-                    const SizedBox(width: AppSpacing.itemSpacing),
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.shade600,
-                          foregroundColor: AppColors.textOnPrimary,
-                          padding: const EdgeInsets.symmetric(
-                              vertical: AppSpacing.buttonPaddingVertical),
-                          shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppSizes.buttonRadius)),
-                          elevation: AppSizes.elevationCard,
-                        ),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          context.read<AuthBloc>().add(AuthLogoutRequested());
-                        },
-                        child: const Text(
-                          'Выйти',
-                          style: TextStyle(
-                            fontSize: AppTypography.buttonTextSize,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: AnimatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        context.read<AuthBloc>().add(AuthLogoutRequested());
+                      },
+                      backgroundColor: Colors.red.shade600,
+                      child: const Text('Выйти'),
                     ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
     );
   }
-
   Future<void> _editProfile() async {
     if (_user == null) return;
-    final nicknameController =
-        TextEditingController(text: _user!.username ?? '');
-    final avatarController =
-        TextEditingController(text: _user!.avatarUrl ?? '');
+    final theme = Theme.of(context);
+    final nicknameController = TextEditingController(text: _user!.username ?? '');
+    final avatarController = TextEditingController(text: _user!.avatarUrl ?? '');
+
     await showDialog<void>(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSizes.dialogRadius)),
-        elevation: AppSizes.elevationDialog,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppSizes.dialogRadius),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppColors.dialogWhite, Colors.grey.shade50],
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.dialogPaddingDefault),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Редактировать профиль',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: AppSpacing.sectionSpacing),
-                TextField(
-                  controller: nicknameController,
-                  decoration: InputDecoration(
-                    labelText: 'Никнейм',
-                    filled: true,
-                    fillColor: Colors.grey.shade100,
-                    border: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppSizes.radiusMedium),
-                      borderSide: BorderSide.none,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Редактировать профиль',
+                style: theme.textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 24),
+              ImprovedTextField(
+                controller: nicknameController,
+                labelText: 'Никнейм',
+                prefixIcon: Icons.person_outline,
+              ),
+              const SizedBox(height: 16),
+              ImprovedTextField(
+                controller: avatarController,
+                labelText: 'URL аватара',
+                prefixIcon: Icons.image_outlined,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: AnimatedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      isOutlined: true,
+                      child: const Text('Отмена'),
                     ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.itemSpacing),
-                TextField(
-                  controller: avatarController,
-                  decoration: InputDecoration(
-                    labelText: 'URL аватара',
-                    filled: true,
-                    fillColor: Colors.grey.shade100,
-                    border: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppSizes.radiusMedium),
-                      borderSide: BorderSide.none,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: AnimatedButton(
+                      onPressed: () async {
+                        final result = await context
+                            .read<AuthRepository>()
+                            .updateMyProfile(
+                              username: nicknameController.text.trim(),
+                              avatar: avatarController.text.trim(),
+                            );
+                        if (!context.mounted) return;
+                        result.fold(
+                          (f) => ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(f.message),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                          (u) {
+                            setState(() => _user = u);
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Профиль обновлен'),
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: theme.colorScheme.primary,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                      child: const Text('Сохранить'),
                     ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.dialogPaddingDefault),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: AppSpacing.buttonPaddingVertical),
-                          shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppSizes.buttonRadius)),
-                          side: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: Text(
-                          'Отмена',
-                          style: TextStyle(
-                            fontSize: AppTypography.buttonTextSize,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.itemSpacing),
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: AppColors.textOnPrimary,
-                          padding: const EdgeInsets.symmetric(
-                              vertical: AppSpacing.buttonPaddingVertical),
-                          shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppSizes.buttonRadius)),
-                          elevation: AppSizes.elevationCard,
-                        ),
-                        onPressed: () async {
-                          final result = await context
-                              .read<AuthRepository>()
-                              .updateMyProfile(
-                                username: nicknameController.text.trim(),
-                                avatar: avatarController.text.trim(),
-                              );
-                          if (!mounted) return;
-                          result.fold(
-                            (f) => ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(f.message))),
-                            (u) {
-                              setState(() => _user = u);
-                              Navigator.of(context).pop();
-                            },
-                          );
-                        },
-                        child: const Text(
-                          'Сохранить',
-                          style: TextStyle(
-                            fontSize: AppTypography.buttonTextSize,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
@@ -319,7 +238,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           valueListenable: _controller.state,
           builder: (context, state, child) {
             if (state.isLoading) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: ImprovedLoadingIndicator());
             }
 
             final user = state.data;
@@ -341,142 +260,145 @@ class _ProfileScreenState extends State<ProfileScreen>
                     backgroundColor: theme.scaffoldBackgroundColor,
                     title: Text(
                       'Профиль',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.3,
-                      ),
+                      style: theme.textTheme.headlineMedium,
                     ),
                     centerTitle: true,
                   ),
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.cardPadding),
+                      padding: const EdgeInsets.all(16),
                       child: Column(
                         children: [
-                          _buildProfileHeader(theme, isDark, user),
-                          const SizedBox(height: AppSpacing.sectionSpacing),
-                          _buildInfoCard(theme, isDark, user),
-                          const SizedBox(height: AppSpacing.sectionSpacing),
-                          _buildRoleFeaturesCard(theme, user, isDark),
-                          const SizedBox(height: AppSpacing.sectionSpacing),
+                          FadeInListItem(
+                            index: 0,
+                            child: _buildProfileHeader(theme, isDark, user),
+                          ),
+                          const SizedBox(height: 24),
+                          FadeInListItem(
+                            index: 1,
+                            child: _buildInfoCard(theme, isDark, user),
+                          ),
+                          const SizedBox(height: 24),
+                          FadeInListItem(
+                            index: 2,
+                            child: _buildRoleFeaturesCard(theme, user, isDark),
+                          ),
+                          const SizedBox(height: 24),
                           if (user.isStudent) ...[
-                            _buildActionButton(
-                              theme: theme,
-                              isDark: isDark,
-                              icon: Icons.grade_outlined,
-                              label: 'Мои оценки',
-                              onTap: () => context.push('/student/grades'),
-                              color: Colors.green,
+                            FadeInListItem(
+                              index: 3,
+                              child: _buildActionButton(
+                                theme: theme,
+                                isDark: isDark,
+                                icon: Icons.grade_outlined,
+                                label: 'Мои оценки',
+                                onTap: () => context.push('/student/grades'),
+                                color: Colors.green,
+                              ),
                             ),
-                            const SizedBox(height: AppSpacing.itemSpacing),
-                            _buildActionButton(
-                              theme: theme,
-                              isDark: isDark,
-                              icon: Icons.poll_outlined,
-                              label: 'Опросы',
-                              onTap: () => context.push('/surveys'),
-                              color: Colors.blue,
+                            const SizedBox(height: 16),
+                            FadeInListItem(
+                              index: 4,
+                              child: _buildActionButton(
+                                theme: theme,
+                                isDark: isDark,
+                                icon: Icons.poll_outlined,
+                                label: 'Опросы',
+                                onTap: () => context.push('/surveys'),
+                                color: Colors.blue,
+                              ),
                             ),
-                            const SizedBox(height: AppSpacing.itemSpacing),
-                            _buildActionButton(
-                              theme: theme,
-                              isDark: isDark,
-                              icon: Icons.support_agent_outlined,
-                              label: 'Обращения',
-                              onTap: () => context.push('/feedback/request'),
-                              color: Colors.teal,
+                            const SizedBox(height: 16),
+                            FadeInListItem(
+                              index: 5,
+                              child: _buildActionButton(
+                                theme: theme,
+                                isDark: isDark,
+                                icon: Icons.support_agent_outlined,
+                                label: 'Обращения',
+                                onTap: () => context.push('/feedback/request'),
+                                color: Colors.teal,
+                              ),
                             ),
-                            const SizedBox(height: AppSpacing.itemSpacing),
+                            const SizedBox(height: 16),
                           ],
                           if (user.isTeacher) ...[
-                            _buildActionButton(
-                              theme: theme,
-                              isDark: isDark,
-                              icon: Icons.dashboard_outlined,
-                              label: 'Открыть кабинет преподавателя',
-                              onTap: () => context.push('/teacher'),
-                              color: theme.colorScheme.secondary,
+                            FadeInListItem(
+                              index: 3,
+                              child: _buildActionButton(
+                                theme: theme,
+                                isDark: isDark,
+                                icon: Icons.dashboard_outlined,
+                                label: 'Кабинет преподавателя',
+                                onTap: () => context.push('/teacher'),
+                                color: theme.colorScheme.secondary,
+                              ),
                             ),
-                            const SizedBox(height: AppSpacing.itemSpacing),
-                            _buildActionButton(
-                              theme: theme,
-                              isDark: isDark,
-                              icon: Icons.fact_check_outlined,
-                              label: 'Оценки учеников',
-                              onTap: () => context.push('/teacher/grades'),
-                              color: Colors.orange,
+                            const SizedBox(height: 16),
+                            FadeInListItem(
+                              index: 4,
+                              child: _buildActionButton(
+                                theme: theme,
+                                isDark: isDark,
+                                icon: Icons.fact_check_outlined,
+                                label: 'Оценки учеников',
+                                onTap: () => context.push('/teacher/grades'),
+                                color: Colors.orange,
+                              ),
                             ),
-                            const SizedBox(height: AppSpacing.itemSpacing),
-                            _buildActionButton(
-                              theme: theme,
-                              isDark: isDark,
-                              icon: Icons.poll_outlined,
-                              label: 'Опросы',
-                              onTap: () => context.push('/surveys'),
-                              color: Colors.blue,
-                            ),
-                            const SizedBox(height: AppSpacing.itemSpacing),
-                            _buildActionButton(
-                              theme: theme,
-                              isDark: isDark,
-                              icon: Icons.support_agent_outlined,
-                              label: 'Обращения',
-                              onTap: () => context.push('/feedback/request'),
-                              color: Colors.teal,
-                            ),
-                            const SizedBox(height: AppSpacing.itemSpacing),
+                            const SizedBox(height: 16),
                           ],
                           if (user.isAdmin) ...[
-                            const SizedBox(height: AppSpacing.itemSpacing),
-                            _buildActionButton(
-                              theme: theme,
-                              isDark: isDark,
-                              icon: Icons.analytics_outlined,
-                              label: 'Анализ платформы',
-                              onTap: () => context.push('/admin/analytics'),
-                              color: Colors.indigo,
+                            FadeInListItem(
+                              index: 6,
+                              child: _buildActionButton(
+                                theme: theme,
+                                isDark: isDark,
+                                icon: Icons.analytics_outlined,
+                                label: 'Анализ платформы',
+                                onTap: () => context.push('/admin/analytics'),
+                                color: Colors.indigo,
+                              ),
                             ),
-                            const SizedBox(height: AppSpacing.itemSpacing),
-                            _buildActionButton(
-                              theme: theme,
-                              isDark: isDark,
-                              icon: Icons.feedback_outlined,
-                              label: 'Обратная связь',
-                              onTap: () => context.push('/admin/feedback'),
-                              color: Colors.teal,
+                            const SizedBox(height: 16),
+                            FadeInListItem(
+                              index: 7,
+                              child: _buildActionButton(
+                                theme: theme,
+                                isDark: isDark,
+                                icon: Icons.feedback_outlined,
+                                label: 'Обратная связь',
+                                onTap: () => context.push('/admin/feedback'),
+                                color: Colors.teal,
+                              ),
                             ),
-                            const SizedBox(height: AppSpacing.itemSpacing),
-                            _buildActionButton(
-                              theme: theme,
-                              isDark: isDark,
-                              icon: Icons.history_edu_outlined,
-                              label: 'Логи API',
-                              onTap: () => context.push('/admin/logs'),
-                              color: Colors.brown,
+                            const SizedBox(height: 16),
+                            FadeInListItem(
+                              index: 8,
+                              child: _buildActionButton(
+                                theme: theme,
+                                isDark: isDark,
+                                icon: Icons.history_edu_outlined,
+                                label: 'Логи API',
+                                onTap: () => context.push('/admin/logs'),
+                                color: Colors.brown,
+                              ),
                             ),
-                            const SizedBox(height: AppSpacing.itemSpacing),
+                            const SizedBox(height: 16),
                           ],
-                          // if (user.isAdmin) ...[
-                          //   _buildActionButton(
-                          //     theme: theme,
-                          //     isDark: isDark,
-                          //     icon: Icons.api_outlined,
-                          //     label: 'API Logs (Debug)',
-                          //     onTap: ChuckerFlutter.showChuckerScreen,
-                          //     color: Colors.teal,
-                          //   ),
-                          //   const SizedBox(height: AppSpacing.itemSpacing),
-                          // ],
-                          _buildActionButton(
-                            theme: theme,
-                            isDark: isDark,
-                            icon: Icons.logout_rounded,
-                            label: 'Выйти из аккаунта',
-                            onTap: _showLogoutDialog,
-                            color: Colors.red.shade400,
-                            isDanger: true,
+                          FadeInListItem(
+                            index: 9,
+                            child: _buildActionButton(
+                              theme: theme,
+                              isDark: isDark,
+                              icon: Icons.logout_rounded,
+                              label: 'Выйти из аккаунта',
+                              onTap: _showLogoutDialog,
+                              color: Colors.red.shade400,
+                              isDanger: true,
+                            ),
                           ),
-                          const SizedBox(height: AppSpacing.xxl),
+                          const SizedBox(height: 32),
                         ],
                       ),
                     ),
@@ -491,124 +413,141 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildProfileHeader(ThemeData theme, bool isDark, User user) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            theme.colorScheme.primary.withOpacity(0.15),
-            theme.colorScheme.primary.withOpacity(0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(AppSizes.radiusXL),
-        border: Border.all(
-          color: theme.colorScheme.primary.withOpacity(0.2),
-          width: 1.5,
-        ),
-        boxShadow: [
-          if (!isDark)
-            BoxShadow(
-              color: theme.colorScheme.primary.withOpacity(0.08),
-              blurRadius: 20,
-              spreadRadius: 0,
-              offset: const Offset(0, 8),
-            ),
+    return AnimatedCard(
+      onTap: _editProfile,
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          theme.colorScheme.primary.withOpacity(0.2),
+          theme.colorScheme.secondary.withOpacity(0.1),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppSizes.radiusXL),
-        child: InkWell(
-          onTap: _editProfile,
-          borderRadius: BorderRadius.circular(AppSizes.radiusXL),
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            child: Column(
-              children: [
-                Container(
+      border: Border.all(
+        color: theme.colorScheme.primary.withOpacity(0.3),
+        width: 2,
+      ),
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        children: [
+          // Аватар с улучшенной тенью
+          Stack(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.primary.withOpacity(0.4),
+                      blurRadius: 24,
+                      spreadRadius: 4,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: CircleAvatar(
+                  radius: 56,
+                  backgroundColor: theme.colorScheme.primary,
+                  backgroundImage: user.avatarUrl != null && user.avatarUrl!.isNotEmpty
+                      ? NetworkImage(user.avatarUrl!)
+                      : null,
+                  child: (user.avatarUrl == null || user.avatarUrl!.isEmpty)
+                      ? Text(
+                          user.firstName.isNotEmpty ? user.firstName[0] : '?',
+                          style: const TextStyle(
+                            fontSize: 42,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        )
+                      : null,
+                ),
+              ),
+              // Индикатор онлайн статуса
+              Positioned(
+                right: 4,
+                bottom: 4,
+                child: Container(
+                  width: 20,
+                  height: 20,
                   decoration: BoxDecoration(
+                    color: Colors.green,
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.colorScheme.primary.withOpacity(0.2),
-                        blurRadius: 16,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: CircleAvatar(
-                    radius: 48,
-                    backgroundColor: theme.colorScheme.primary,
-                    backgroundImage:
-                        user.avatarUrl != null && user.avatarUrl!.isNotEmpty
-                            ? NetworkImage(user.avatarUrl!)
-                            : null,
-                    child: (user.avatarUrl == null || user.avatarUrl!.isEmpty)
-                        ? Text(
-                            user.firstName.isNotEmpty ? user.firstName[0] : '?',
-                            style: const TextStyle(
-                                fontSize: 36,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600),
-                          )
-                        : null,
+                    border: Border.all(
+                      color: theme.colorScheme.surface,
+                      width: 3,
+                    ),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.md),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          // Имя пользователя
+          Text(
+            user.fullName,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          // Username
+          Text(
+            user.displayName,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.65),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          // Email/Phone
+          Text(
+            user.email ?? user.phone ?? '',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.5),
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Кнопка редактирования
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  theme.colorScheme.primary.withOpacity(0.15),
+                  theme.colorScheme.primary.withOpacity(0.08),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: theme.colorScheme.primary.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.edit_outlined,
+                  size: 18,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
                 Text(
-                  user.fullName,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontSize: AppTypography.fontSizeXLarge,
+                  'Редактировать профиль',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.primary,
                     fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  user.displayName,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  user.email ?? user.phone ?? '',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.5),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md, vertical: AppSpacing.xs),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(AppSizes.radiusSmall),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.edit_outlined,
-                          size: 14, color: theme.colorScheme.primary),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Редактировать',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
-
   Widget _buildInfoCard(ThemeData theme, bool isDark, User user) {
     return Container(
       decoration: BoxDecoration(
