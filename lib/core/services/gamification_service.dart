@@ -50,7 +50,7 @@ class GamificationService {
     required GamificationProgress progress,
     required bool isFirstCourse,
   }) async {
-    final xp = XpRewards.courseComplete;
+    const xp = XpRewards.courseComplete;
     final newProgress = progress.addXp(xp);
 
     _logger.i('Awarded $xp XP for course complete (first: $isFirstCourse)');
