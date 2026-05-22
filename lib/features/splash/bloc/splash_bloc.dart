@@ -18,6 +18,13 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
   Future<void> _onSplashStarted(SplashStarted event, Emitter<SplashState> emit) async {
     emit(SplashLoading());
 
+    // Run token migration asynchronously (non-blocking)
+    // This ensures tokens are migrated to secure storage on first launch
+    _localStorage.migrateFromSharedPreferences().catchError((e) {
+      // Silent failure - migration will retry on next launch
+      // User can still use the app if migration fails
+    });
+
     // Use minimum splash time (800ms) in parallel with auth check
     // This ensures smooth UX without artificial delays
     final minSplashTime = Future.delayed(const Duration(milliseconds: 800));

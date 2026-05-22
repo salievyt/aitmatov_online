@@ -4,7 +4,7 @@ import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:async';
 
-import '../../../data/local/local_storage.dart';
+import '../../../data/local/secure_local_storage.dart';
 import '../../../domain/entities/messenger/chat_models.dart';
 import '../../../domain/repositories/messenger_repository.dart';
 import '../bloc/messenger_bloc.dart';
@@ -29,7 +29,7 @@ class _MessengerChatScreenState extends State<MessengerChatScreen> {
     super.initState();
     _bloc = MessengerBloc(
       GetIt.I<MessengerRepository>(),
-      GetIt.I<LocalStorage>(),
+      GetIt.I<SecureLocalStorage>(),
     )..add(LoadGroupMessagesRequested(groupId: widget.groupId));
     _wsSub = GetIt.I<MessengerRepository>().connectGroupStream(widget.groupId).listen((event) {
       if (!mounted) return;

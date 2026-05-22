@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/network/dio_client.dart';
 import '../core/network/network_info.dart';
+import '../core/services/analytics_service.dart';
 import '../data/local/local_storage.dart';
 import '../data/local/secure_local_storage.dart';
 import '../data/repositories/aitmatov_repository_impl.dart';
@@ -38,9 +39,8 @@ Future<void> configureDependencies() async {
   // Keep old LocalStorage for backward compatibility during migration
   getIt.registerLazySingleton<LocalStorage>(() => LocalStorage(getIt()));
 
-  // Register SecureLocalStorage and perform migration
+  // Register SecureLocalStorage (migration will run asynchronously in SplashBloc)
   final secureStorage = SecureLocalStorage(sharedPreferences);
-  await secureStorage.migrateFromSharedPreferences();
   getIt.registerLazySingleton<SecureLocalStorage>(() => secureStorage);
 
   // Create DioClient with SecureLocalStorage for automatic token injection
@@ -49,6 +49,9 @@ Future<void> configureDependencies() async {
   getIt.registerLazySingleton<Dio>(() => dio);
 
   getIt.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl());
+
+  // Services
+  getIt.registerLazySingleton<AnalyticsService>(() => AnalyticsService());
 
   // Repositories
   getIt.registerLazySingleton<AuthRepository>(

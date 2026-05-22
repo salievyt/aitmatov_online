@@ -89,21 +89,11 @@ class SecureLocalStorage {
 
   Future<String?> getRefreshToken() async {
     try {
-      final token = await _secureStorage.read(key: _refreshTokenKey);
-      if (token != null && token.isNotEmpty) return token;
-
-      // Fallback to SharedPreferences if secure storage is empty
-      final fallbackToken = _prefs.getString(_refreshTokenKey);
-      if (fallbackToken != null && fallbackToken.isNotEmpty) {
-        debugPrint('Using fallback refresh token from SharedPreferences');
-        return fallbackToken;
-      }
-
-      return null;
+      return await _secureStorage.read(key: _refreshTokenKey);
     } catch (e) {
       debugPrint('Error reading refresh token from secure storage: $e');
-      // Try fallback on error
-      return _prefs.getString(_refreshTokenKey);
+      // DO NOT fallback to insecure storage - force re-authentication
+      return null;
     }
   }
 
