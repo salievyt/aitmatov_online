@@ -92,16 +92,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   snap: true,
                   expandedHeight: 120,
                   backgroundColor: theme.scaffoldBackgroundColor,
-                  actions: [
-                    IconButton(
-                      icon: const Icon(Icons.search),
-                      onPressed: () => showSearch(
-                        context: context,
-                        delegate: SubjectSearchDelegate(subjects),
-                      ),
-                      tooltip: 'Поиск предметов',
-                    ),
-                  ],
                   flexibleSpace: FlexibleSpaceBar(
                     title: Text(
                       'Айтматов онлайн',
@@ -126,6 +116,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ),
                   ),
                   actions: [
+                    // Кнопка поиска
+                    IconButton(
+                      icon: const Icon(Icons.search),
+                      onPressed: () => showSearch(
+                        context: context,
+                        delegate: SubjectSearchDelegate(subjects),
+                      ),
+                      tooltip: 'Поиск предметов',
+                    ),
                     // Иконка уведомлений
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
@@ -643,7 +642,7 @@ class SubjectSearchDelegate extends SearchDelegate<Subject?> {
   Widget _buildSearchResults(BuildContext context) {
     final theme = Theme.of(context);
     final results = subjects
-        .where((s) => s.title.toLowerCase().contains(query.toLowerCase()))
+        .where((s) => s.name.toLowerCase().contains(query.toLowerCase()))
         .toList();
 
     if (query.isEmpty) {
@@ -706,58 +705,67 @@ class SubjectSearchDelegate extends SearchDelegate<Subject?> {
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
-          child: AnimatedCard(
-            onTap: () {
-              close(context, subject);
-              context.push('/subject/${subject.id}');
-            },
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                color.withOpacity(0.15),
-                color.withOpacity(0.05),
-              ],
-            ),
-            border: Border.all(
-              color: color.withOpacity(0.3),
-              width: 1.5,
-            ),
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [color, color.withOpacity(0.7)],
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                close(context, subject);
+                context.push('/subject/${subject.id}');
+              },
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      color.withOpacity(0.15),
+                      color.withOpacity(0.05),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: color.withOpacity(0.3),
+                    width: 1.5,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [color, color.withOpacity(0.7)],
+                        ),
+                      ),
+                      child: Icon(
+                        _iconFromName(subject.icon),
+                        size: 24,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  child: Icon(
-                    _iconFromName(subject.iconName),
-                    size: 24,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    subject.title,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        subject.name,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
-                  ),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: theme.colorScheme.onSurface.withOpacity(0.4),
+                    ),
+                  ],
                 ),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: theme.colorScheme.onSurface.withOpacity(0.4),
-                ),
-              ],
+              ),
             ),
           ),
         );

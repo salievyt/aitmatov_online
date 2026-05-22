@@ -58,6 +58,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
+    // Проверка на пустоту после trim (защита от пробелов)
     if (email.isEmpty || password.isEmpty) {
       _showErrorSnackBar('Заполните все поля');
       return;

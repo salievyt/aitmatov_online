@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 class DioClient {
   static const String _rawBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://dev.phantom-ink.online/api',
+    defaultValue: 'https://dev.phantom-ink.online/api',
     // defaultValue: 'http://127.0.0.1/api',
   );
   static const int _timeoutSeconds = 15;

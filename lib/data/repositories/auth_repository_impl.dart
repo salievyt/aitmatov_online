@@ -4,7 +4,7 @@ import 'package:aitmatov_app/core/errors/exceptions.dart';
 import 'package:aitmatov_app/core/errors/failures.dart';
 import 'package:aitmatov_app/core/network/network_info.dart';
 import 'package:aitmatov_app/data/dto/user_dto.dart';
-import 'package:aitmatov_app/data/local/local_storage.dart';
+import 'package:aitmatov_app/data/local/secure_local_storage.dart';
 import 'package:aitmatov_app/domain/entities/user.dart';
 import 'package:aitmatov_app/domain/repositories/auth_repository.dart';
 import 'package:dartz/dartz.dart';
@@ -12,7 +12,7 @@ import 'package:dio/dio.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final Dio _dio;
-  final LocalStorage _localStorage;
+  final SecureLocalStorage _localStorage;
   final NetworkInfo _networkInfo;
 
   AuthRepositoryImpl(this._dio, this._localStorage, this._networkInfo);
@@ -137,7 +137,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<bool> isAuthenticated() async {
-    final token = _localStorage.getToken();
+    final token = await _localStorage.getToken();
     if (token != null && token.isNotEmpty) {
       _dio.options.headers['Authorization'] = 'Bearer $token';
       return true;

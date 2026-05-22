@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 
-import '../../../data/local/local_storage.dart';
+import '../../../data/local/secure_local_storage.dart';
 import '../../../domain/repositories/auth_repository.dart';
 
 part 'splash_event.dart';
@@ -9,7 +9,7 @@ part 'splash_state.dart';
 
 class SplashBloc extends Bloc<SplashEvent, SplashState> {
   final AuthRepository _authRepository;
-  final LocalStorage _localStorage;
+  final SecureLocalStorage _localStorage;
 
   SplashBloc(this._authRepository, this._localStorage) : super(SplashInitial()) {
     on<SplashStarted>(_onSplashStarted);

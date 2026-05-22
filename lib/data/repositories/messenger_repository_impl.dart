@@ -7,7 +7,7 @@ import 'package:dio/dio.dart';
 
 import '../../core/errors/failures.dart';
 import '../../core/network/network_info.dart';
-import '../../data/local/local_storage.dart';
+import '../../data/local/secure_local_storage.dart';
 import '../../domain/entities/messenger/chat_models.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/repositories/messenger_repository.dart';
@@ -15,7 +15,7 @@ import '../../domain/repositories/messenger_repository.dart';
 class MessengerRepositoryImpl implements MessengerRepository {
   final Dio _dio;
   final NetworkInfo _networkInfo;
-  final LocalStorage _localStorage;
+  final SecureLocalStorage _localStorage;
 
   final Map<String, WebSocket> _groupSockets = {};
   final Map<String, StreamController<ChatMessage>> _groupControllers = {};
@@ -67,8 +67,16 @@ class MessengerRepositoryImpl implements MessengerRepository {
 
   Future<void> _connectGroupSocket(String groupId, StreamController<ChatMessage> controller) async {
     try {
-      final uri = _wsUriWithAuth('/ws/messenger/$groupId/');
-      final socket = await WebSocket.connect(uri.toString());
+      final uri = _wsUri('/ws/messenger/$groupId/');
+      final token = await _localStorage.getToken();
+
+      final socket = await WebSocket.connect(
+        uri.toString(),
+        headers: token != null && token.isNotEmpty
+            ? {'Authorization': 'Bearer $token'}
+            : null,
+      );
+
       _groupSockets[groupId] = socket;
       socket.listen((event) {
         final payload = _decodeEvent(event);
@@ -155,8 +163,16 @@ class MessengerRepositoryImpl implements MessengerRepository {
 
   Future<void> _connectChannelSocket(String channelId, StreamController<ChannelMessage> controller) async {
     try {
-      final uri = _wsUriWithAuth('/ws/messenger/channels/$channelId/');
-      final socket = await WebSocket.connect(uri.toString());
+      final uri = _wsUri('/ws/messenger/channels/$channelId/');
+      final token = await _localStorage.getToken();
+
+      final socket = await WebSocket.connect(
+        uri.toString(),
+        headers: token != null && token.isNotEmpty
+            ? {'Authorization': 'Bearer $token'}
+            : null,
+      );
+
       _channelSockets[channelId] = socket;
       socket.listen((event) {
         final payload = _decodeEvent(event);
@@ -201,29 +217,6 @@ class MessengerRepositoryImpl implements MessengerRepository {
     // Удаляем /api из пути для WebSocket
     final wsPath = path.startsWith('/') ? path : '/$path';
     return Uri(scheme: scheme, host: base.host, port: base.hasPort ? base.port : null, path: wsPath);
-  }
-
-  Uri _wsUriWithAuth(String path) {
-    final base = Uri.parse(_dio.options.baseUrl);
-    final scheme = base.scheme == 'https' ? 'wss' : 'ws';
-    final token = _localStorage.getToken();
-    // Удаляем /api из пути для WebSocket
-    final wsPath = path.startsWith('/') ? path : '/$path';
-    if (token == null || token.isEmpty) {
-      return Uri(
-        scheme: scheme,
-        host: base.host,
-        port: base.hasPort ? base.port : null,
-        path: wsPath,
-      );
-    }
-    return Uri(
-      scheme: scheme,
-      host: base.host,
-      port: base.hasPort ? base.port : null,
-      path: wsPath,
-      queryParameters: {'token': token},
-    );
   }
 
   Map<String, dynamic>? _decodeEvent(dynamic event) {

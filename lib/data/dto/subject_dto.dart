@@ -18,8 +18,8 @@ class SubjectDto {
   factory SubjectDto.fromJson(Map<String, dynamic> json) {
     return SubjectDto(
       id: json['id'] as int,
-      name: json['name'] as String,
-      slug: json['slug'] as String,
+      name: (json['name'] as String?) ?? 'Без названия',
+      slug: (json['slug'] as String?) ?? 'unknown',
       description: json['description'] as String?,
       icon: json['icon'] as String?,
     );
