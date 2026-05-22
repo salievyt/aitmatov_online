@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../data/local/local_storage.dart';
+import '../../../data/local/secure_local_storage.dart';
 import '../../../domain/entities/messenger/chat_models.dart';
 import '../../../domain/repositories/messenger_repository.dart';
 
@@ -10,7 +10,7 @@ part 'messenger_state.dart';
 
 class MessengerBloc extends Bloc<MessengerEvent, MessengerState> {
   final MessengerRepository _repository;
-  final LocalStorage _localStorage;
+  final SecureLocalStorage _localStorage;
 
   MessengerBloc(this._repository, this._localStorage) : super(MessengerInitial()) {
     on<LoadGroupsRequested>(_onLoadGroups);
