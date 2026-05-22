@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 
 import '../../../core/errors/failures.dart';
+import '../../../core/services/analytics_service.dart';
 import '../../../domain/entities/user.dart';
 import '../../../domain/repositories/auth_repository.dart';
 
@@ -10,8 +11,9 @@ part 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository _authRepository;
+  final AnalyticsService _analytics;
 
-  AuthBloc(this._authRepository) : super(AuthInitial()) {
+  AuthBloc(this._authRepository, this._analytics) : super(AuthInitial()) {
     on<AuthLoginRequested>(_onLoginRequested);
     on<AuthSignupRequested>(_onSignupRequested);
     on<AuthLogoutRequested>(_onLogoutRequested);
@@ -23,7 +25,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final result = await _authRepository.login(event.email, event.password);
     result.fold(
       (failure) => emit(AuthError(_mapFailureToMessage(failure))),
-      (user) => emit(AuthAuthenticated(user)),
+      (user) {
+        // Track login event
+        _analytics.logLogin(
+          method: 'email',
+          userId: user.id.toString(),
+          role: user.role,
+        );
+        emit(AuthAuthenticated(user));
+      },
     );
   }
 
@@ -32,7 +42,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final result = await _authRepository.signup(event.data);
     result.fold(
       (failure) => emit(AuthError(_mapFailureToMessage(failure))),
-      (user) => emit(AuthAuthenticated(user)),
+      (user) {
+        // Track signup event
+        _analytics.logSignUp(
+          method: 'email',
+          role: user.role,
+        );
+        emit(AuthAuthenticated(user));
+      },
     );
   }
 
@@ -41,7 +58,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final result = await _authRepository.logout();
     result.fold(
       (failure) => emit(AuthError(_mapFailureToMessage(failure))),
-      (_) => emit(AuthUnauthenticated()),
+      (_) {
+        // Track logout event
+        _analytics.logLogout();
+        emit(AuthUnauthenticated());
+      },
     );
   }
 
