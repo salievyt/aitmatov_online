@@ -1,6 +1,11 @@
 import Flutter
 import UIKit
 
+
+/*
+CREATE BY SM1LE 2026
+*/
+
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   override func application(
@@ -13,4 +18,5 @@ import UIKit
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
   }
+
 }

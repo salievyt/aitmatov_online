@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/presentation/controllers/async_controller.dart';
@@ -47,7 +48,23 @@ class _AitmatovScreenState extends State<AitmatovScreen> {
         valueListenable: _controller.state,
         builder: (context, state, child) {
           if (state.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      theme.colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Загрузка тем Айтматова...',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            );
           }
 
           if (state.hasError) {
@@ -62,10 +79,12 @@ class _AitmatovScreenState extends State<AitmatovScreen> {
 
           final themes = state.data ?? const [];
           if (themes.isEmpty) {
-            return const EmptyStateWidget(
+            return EmptyStateWidget(
               icon: Icons.auto_stories,
-              title: 'Нет тем',
-              subtitle: 'Темы Айтматова пока не добавлены',
+              title: 'Мир Айтматова пока закрыт',
+              subtitle: 'Темы творчества писателя будут добавлены в ближайшее время. Проверьте позже.',
+              buttonText: 'Вернуться',
+              onPressed: () => context.pop(),
             );
           }
 
@@ -87,36 +106,65 @@ class _AitmatovScreenState extends State<AitmatovScreen> {
                               (context, index) {
                                 final themeItem = themes[index];
                                 return Padding(
-                                  padding: const EdgeInsets.only(bottom: 12.0),
-                                  child: Card(
-                                    clipBehavior: Clip.antiAlias,
-                                    child: InkWell(
-                                      onTap: () => context.push('/courses?aitmatov_theme=${themeItem.id}'),
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(20.0),
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.all(12),
-                                              decoration: BoxDecoration(
-                                                color: _getThemeColor(themeItem.icon).withOpacity(0.15),
-                                                borderRadius: BorderRadius.circular(12),
+                                  padding: const EdgeInsets.only(bottom: 16.0),
+                                  child: Semantics(
+                                    button: true,
+                                    enabled: true,
+                                    label: 'Тема: ${themeItem.name}. ${themeItem.description}',
+                                    child: Card(
+                                      clipBehavior: Clip.antiAlias,
+                                      child: InkWell(
+                                        onTap: () {
+                                          HapticFeedback.lightImpact();
+                                          context.push('/courses?aitmatov_theme=${themeItem.id}');
+                                        },
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(16.0),
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.all(12),
+                                                decoration: BoxDecoration(
+                                                  color: _getThemeColor(themeItem.icon, context).withOpacity(0.2),
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                                child: Icon(
+                                                  _getThemeIcon(themeItem.icon),
+                                                  color: _getThemeColor(themeItem.icon, context),
+                                                  size: 28,
+                                                ),
                                               ),
-                                              child: Icon(_getThemeIcon(themeItem.icon), color: _getThemeColor(themeItem.icon), size: 28),
-                                            ),
-                                            const SizedBox(width: 16),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(themeItem.name, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-                                                  const SizedBox(height: 4),
-                                                  Text(themeItem.description, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6))),
-                                                ],
+                                              const SizedBox(width: 16),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      themeItem.name,
+                                                      style: theme.textTheme.titleMedium?.copyWith(
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                      themeItem.description,
+                                                      style: theme.textTheme.bodySmall?.copyWith(
+                                                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
-                                            ),
-                                            const Icon(Icons.arrow_forward_ios, size: 16),
-                                          ],
+                                              Padding(
+                                                padding: const EdgeInsets.all(8.0),
+                                                child: Icon(
+                                                  Icons.arrow_forward_ios,
+                                                  size: 16,
+                                                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -147,16 +195,17 @@ class _AitmatovScreenState extends State<AitmatovScreen> {
     }
   }
 
-  Color _getThemeColor(String? iconName) {
+  Color _getThemeColor(String? iconName, BuildContext context) {
+    final theme = Theme.of(context);
     switch (iconName) {
       case 'done':
-        return const Color(0xFFD4A373);
+        return theme.colorScheme.secondary; // Любовь/Романтика
       case 'forest':
-        return const Color(0xFF81B29A);
+        return const Color(0xFF81B29A); // Природа (семантический цвет)
       case 'military_tech':
-        return const Color(0xFFE07A5F);
+        return theme.colorScheme.error; // Война/Конфликт
       default:
-        return const Color(0xFF6B73FF);
+        return theme.colorScheme.primary;
     }
   }
 }

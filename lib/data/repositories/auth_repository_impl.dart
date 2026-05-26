@@ -23,6 +23,7 @@ class AuthRepositoryImpl implements AuthRepository {
       return const Left(NetworkFailure());
     }
     try {
+      // Step 1: Login and get tokens
       final response = await _dio.post('/auth/login/', data: {
         'email': email,
         'password': password,
@@ -30,22 +31,22 @@ class AuthRepositoryImpl implements AuthRepository {
       final responseBody = response.data as Map<String, dynamic>;
       final token = responseBody['access'] as String?;
       final refreshToken = responseBody['refresh'] as String?;
-      if (token != null) {
-        await _localStorage.setToken(token);
-        // Token will be automatically injected by AuthInterceptor on next request
+
+      if (token == null) {
+        return const Left(ServerFailure('Токен не получен'));
       }
+
+      await _localStorage.setToken(token);
       if (refreshToken != null) {
         await _localStorage.setRefreshToken(refreshToken);
       }
-      var userJson = responseBody['user'] as Map<String, dynamic>? ??
-          responseBody['data'] as Map<String, dynamic>?;
-      if (userJson == null) {
-        final profileResponse = await _dio.get('/users/me/');
-        final profileBody = profileResponse.data as Map<String, dynamic>;
-        userJson = profileBody['data'] as Map<String, dynamic>? ?? profileBody;
-      }
-      final user = UserDto.fromJson(userJson).toEntity();
-      await _localStorage.cacheUser(userJson);
+
+      // Step 2: Get user profile with the new token
+      final profileResponse = await _dio.get('/users/me/');
+      final profileBody = profileResponse.data as Map<String, dynamic>;
+      final user = UserDto.fromJson(profileBody).toEntity();
+      await _localStorage.cacheUser(profileBody);
+
       return Right(user);
     } on NeedAuthException catch (e) {
       return Left(AuthFailure(e.message));

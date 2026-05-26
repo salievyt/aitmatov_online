@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/network/dio_client.dart';
 import '../core/network/network_info.dart';
 import '../core/services/analytics_service.dart';
+import '../core/services/gamification_service.dart';
 import '../data/local/local_storage.dart';
 import '../data/local/secure_local_storage.dart';
 import '../data/repositories/aitmatov_repository_impl.dart';
@@ -52,6 +53,9 @@ Future<void> configureDependencies() async {
 
   // Services
   getIt.registerLazySingleton<AnalyticsService>(() => AnalyticsService());
+  getIt.registerLazySingleton<GamificationService>(
+    () => GamificationService(analytics: getIt()),
+  );
 
   // Repositories
   getIt.registerLazySingleton<AuthRepository>(
@@ -84,6 +88,6 @@ Future<void> configureDependencies() async {
 
   // Blocs
   getIt.registerFactory<SplashBloc>(() => SplashBloc(getIt(), getIt()));
-  getIt.registerFactory<AuthBloc>(() => AuthBloc(getIt()));
+  getIt.registerFactory<AuthBloc>(() => AuthBloc(getIt(), getIt()));
   getIt.registerFactory<MessengerBloc>(() => MessengerBloc(getIt(), getIt()));
 }
