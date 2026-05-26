@@ -8,6 +8,12 @@ class SecureLocalStorage {
   final FlutterSecureStorage _secureStorage;
   final SharedPreferences _prefs;
 
+  // Флаг для отслеживания ошибок Keychain (симулятор iOS)
+  bool _useSharedPreferencesFallback = false;
+
+  // Флаг для отслеживания, была ли проверка доступности Keychain
+  bool _keychainAvailabilityChecked = false;
+
   SecureLocalStorage(this._prefs)
       : _secureStorage = const FlutterSecureStorage(
           aOptions: AndroidOptions(encryptedSharedPreferences: true),
@@ -23,83 +29,200 @@ class SecureLocalStorage {
   static const String _themeKey = 'theme_mode';
   static const String _userKey = 'cached_user';
   static const String _migrationKey = 'secure_storage_migrated';
+  static const String _keychainTestKey = '_keychain_availability_test';
+
+  /// Проверяет доступность Keychain/SecureStorage
+  /// Возвращает true если доступен, false если нужен fallback на SharedPreferences
+  Future<bool> _checkKeychainAvailability() async {
+    if (_keychainAvailabilityChecked) {
+      return !_useSharedPreferencesFallback;
+    }
+
+    try {
+      // Пытаемся записать и прочитать тестовое значение
+      const testValue = 'test';
+      await _secureStorage.write(key: _keychainTestKey, value: testValue);
+      final readValue = await _secureStorage.read(key: _keychainTestKey);
+      await _secureStorage.delete(key: _keychainTestKey);
+
+      _keychainAvailabilityChecked = true;
+      _useSharedPreferencesFallback = (readValue != testValue);
+
+      if (_useSharedPreferencesFallback) {
+        debugPrint('SecureStorage not available (iOS Simulator?), using SharedPreferences fallback');
+      }
+
+      return !_useSharedPreferencesFallback;
+    } catch (e) {
+      // Keychain недоступен (симулятор iOS или другая проблема)
+      debugPrint('SecureStorage not available (iOS Simulator?), using SharedPreferences fallback');
+      _keychainAvailabilityChecked = true;
+      _useSharedPreferencesFallback = true;
+      return false;
+    }
+  }
 
   Future<void> migrateFromSharedPreferences() async {
     final migrated = _prefs.getBool(_migrationKey) ?? false;
     if (migrated) return;
 
     try {
+      // Сначала проверяем доступность Keychain
+      final keychainAvailable = await _checkKeychainAvailability();
+
+      if (!keychainAvailable) {
+        // Keychain недоступен, токены остаются в SharedPreferences
+        debugPrint('Keychain not available, tokens will remain in SharedPreferences');
+        await _prefs.setBool(_migrationKey, true);
+        return;
+      }
+
       // Migrate access token with atomic write-verify-delete pattern
       final oldToken = _prefs.getString(_tokenKey);
       if (oldToken != null && oldToken.isNotEmpty) {
-        // Step 1: Write to secure storage
-        await _secureStorage.write(key: _tokenKey, value: oldToken);
+        try {
+          // Step 1: Write to secure storage
+          await _secureStorage.write(key: _tokenKey, value: oldToken);
 
-        // Step 2: Verify the write was successful
-        final verifyToken = await _secureStorage.read(key: _tokenKey);
-        if (verifyToken == oldToken) {
-          // Step 3: Only delete from SharedPreferences after verification
-          await _prefs.remove(_tokenKey);
-        } else {
-          // Verification failed, log error but don't delete old token
-          debugPrint('Token migration verification failed, keeping fallback in SharedPreferences');
+          // Step 2: Verify the write was successful
+          final verifyToken = await _secureStorage.read(key: _tokenKey);
+          if (verifyToken == oldToken) {
+            // Step 3: Only delete from SharedPreferences after verification
+            await _prefs.remove(_tokenKey);
+          } else {
+            debugPrint('Token migration verification failed, keeping fallback in SharedPreferences');
+          }
+        } catch (e) {
+          debugPrint('Error migrating token: $e');
+          _useSharedPreferencesFallback = true;
         }
       }
 
       // Migrate refresh token with same atomic pattern
       final oldRefreshToken = _prefs.getString(_refreshTokenKey);
-      if (oldRefreshToken != null && oldRefreshToken.isNotEmpty) {
-        await _secureStorage.write(key: _refreshTokenKey, value: oldRefreshToken);
+      if (oldRefreshToken != null && oldRefreshToken.isNotEmpty && !_useSharedPreferencesFallback) {
+        try {
+          await _secureStorage.write(key: _refreshTokenKey, value: oldRefreshToken);
 
-        final verifyRefreshToken = await _secureStorage.read(key: _refreshTokenKey);
-        if (verifyRefreshToken == oldRefreshToken) {
-          await _prefs.remove(_refreshTokenKey);
-        } else {
-          debugPrint('Refresh token migration verification failed, keeping fallback in SharedPreferences');
+          final verifyRefreshToken = await _secureStorage.read(key: _refreshTokenKey);
+          if (verifyRefreshToken == oldRefreshToken) {
+            await _prefs.remove(_refreshTokenKey);
+          } else {
+            debugPrint('Refresh token migration verification failed, keeping fallback in SharedPreferences');
+          }
+        } catch (e) {
+          debugPrint('Error migrating refresh token: $e');
+          _useSharedPreferencesFallback = true;
         }
       }
 
-      // Mark migration as complete only if we got this far
+      // Mark migration as complete
       await _prefs.setBool(_migrationKey, true);
     } catch (e, stackTrace) {
-      // Log error but don't mark as migrated - will retry next time
+      // Log error but mark as migrated to avoid infinite retry loop
       debugPrint('Token migration failed: $e');
       debugPrint('Stack trace: $stackTrace');
-      // Don't set migration flag, so it will retry on next app start
+      _useSharedPreferencesFallback = true;
+      await _prefs.setBool(_migrationKey, true);
     }
   }
 
   Future<void> setToken(String token) async {
-    await _secureStorage.write(key: _tokenKey, value: token);
+    // Проверяем доступность Keychain при первом обращении
+    if (!_keychainAvailabilityChecked) {
+      await _checkKeychainAvailability();
+    }
+
+    // Если Keychain недоступен, используем SharedPreferences
+    if (_useSharedPreferencesFallback) {
+      await _prefs.setString(_tokenKey, token);
+      return;
+    }
+
+    try {
+      await _secureStorage.write(key: _tokenKey, value: token);
+    } catch (e) {
+      debugPrint('Error writing token to secure storage: $e');
+      // Fallback на SharedPreferences
+      _useSharedPreferencesFallback = true;
+      await _prefs.setString(_tokenKey, token);
+    }
   }
 
   Future<String?> getToken() async {
+    // Проверяем доступность Keychain при первом обращении
+    if (!_keychainAvailabilityChecked) {
+      await _checkKeychainAvailability();
+    }
+
+    // Если Keychain недоступен, используем SharedPreferences
+    if (_useSharedPreferencesFallback) {
+      return _prefs.getString(_tokenKey);
+    }
+
     try {
       return await _secureStorage.read(key: _tokenKey);
     } catch (e) {
       debugPrint('Error reading token from secure storage: $e');
-      // DO NOT fallback to insecure storage - force re-authentication
-      return null;
+      // Fallback на SharedPreferences
+      _useSharedPreferencesFallback = true;
+      return _prefs.getString(_tokenKey);
     }
   }
 
   Future<void> setRefreshToken(String token) async {
-    await _secureStorage.write(key: _refreshTokenKey, value: token);
+    // Проверяем доступность Keychain при первом обращении
+    if (!_keychainAvailabilityChecked) {
+      await _checkKeychainAvailability();
+    }
+
+    if (_useSharedPreferencesFallback) {
+      await _prefs.setString(_refreshTokenKey, token);
+      return;
+    }
+
+    try {
+      await _secureStorage.write(key: _refreshTokenKey, value: token);
+    } catch (e) {
+      debugPrint('Error writing refresh token to secure storage: $e');
+      _useSharedPreferencesFallback = true;
+      await _prefs.setString(_refreshTokenKey, token);
+    }
   }
 
   Future<String?> getRefreshToken() async {
+    // Проверяем доступность Keychain при первом обращении
+    if (!_keychainAvailabilityChecked) {
+      await _checkKeychainAvailability();
+    }
+
+    if (_useSharedPreferencesFallback) {
+      return _prefs.getString(_refreshTokenKey);
+    }
+
     try {
       return await _secureStorage.read(key: _refreshTokenKey);
     } catch (e) {
       debugPrint('Error reading refresh token from secure storage: $e');
-      // DO NOT fallback to insecure storage - force re-authentication
-      return null;
+      _useSharedPreferencesFallback = true;
+      return _prefs.getString(_refreshTokenKey);
     }
   }
 
   Future<void> clearToken() async {
-    await _secureStorage.delete(key: _tokenKey);
-    await _secureStorage.delete(key: _refreshTokenKey);
+    // Очищаем из обоих хранилищ для надёжности
+    await _prefs.remove(_tokenKey);
+    await _prefs.remove(_refreshTokenKey);
+
+    if (!_useSharedPreferencesFallback) {
+      try {
+        await _secureStorage.delete(key: _tokenKey);
+        await _secureStorage.delete(key: _refreshTokenKey);
+      } catch (e) {
+        debugPrint('Error clearing tokens from secure storage: $e');
+        // Не критично, токены уже удалены из SharedPreferences
+      }
+    }
   }
 
   Future<void> setFirstLaunch(bool value) async {

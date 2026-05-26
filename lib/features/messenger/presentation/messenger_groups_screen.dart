@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/di.dart';
 import '../../../data/local/secure_local_storage.dart';
 import '../../../domain/entities/messenger/chat_models.dart';
 import '../../../domain/repositories/messenger_repository.dart';
@@ -37,7 +38,7 @@ class _MessengerGroupsScreenState extends State<MessengerGroupsScreen>
     return BlocProvider(
       create: (context) => MessengerBloc(
         context.read<MessengerRepository>(),
-        context.read<SecureLocalStorage>(),
+        getIt<SecureLocalStorage>(),
       )
         ..add(LoadGroupsRequested())
         ..add(LoadChannelsRequested()),
